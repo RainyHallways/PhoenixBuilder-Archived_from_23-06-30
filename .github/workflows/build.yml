@@ -238,7 +238,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
       with:
-        tag_name: v${{ steps.release_version.outputs.release_version }}
+        tag_name: Pre${{ steps.release_version.outputs.release_version }}
         files: |
           fb-upload.tar.gz
           build/*
