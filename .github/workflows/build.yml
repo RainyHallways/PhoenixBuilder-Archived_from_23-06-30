@@ -42,6 +42,11 @@ jobs:
       if: steps.cache-ndk.outputs.cache-hit != 'true'
       run: mv ${{ steps.setup-ndk.outputs.ndk-path }} ${HOME}/android-ndk-r20b
       
+    - name: Install mingw-w64
+      run: |
+        sudo apt update
+        sudo apt install mingw-w64
+
     - name: Install compilers
       run: |
         sudo apt update
