@@ -41,7 +41,7 @@ ifneq ($(wildcard /usr/bin/i686-w64-mingw32-gcc),)
 	TARGETS:=${TARGETS} windows-executable-x86
 endif
 ifneq ($(wildcard /usr/bin/x86_64-w64-mingw32-gcc),)
-	TARGETS:=${TARGETS} windows-executable-x86_64
+	TARGETS:=${TARGETS} windows-executable-x86_64 windows-v8-executable-x86_64
 endif
 ifneq ($(wildcard /usr/bin/aarch64-linux-gnu-gcc),)
 	TARGETS:=${TARGETS} current-arm64-executable
