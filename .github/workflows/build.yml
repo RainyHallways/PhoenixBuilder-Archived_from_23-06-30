@@ -47,7 +47,20 @@ jobs:
         sudo apt update
         sudo apt install mingw-w64
         sudo apt install gcc-mingw-w64
-
+        
+    - name: Install v8
+      run: |
+        mkdir v8
+        cd v8
+        wget https://nodejs.org/dist/v18.13.0/node-v18.13.0.tar.gz
+        tar -xvzf node-v18.13.0.tar.gz
+        cd node-v18.13.0
+        ./configure
+        make
+        cp libv8.so /usr/bin/x86_64-w64-mingw32-ld/libv8.so
+        make install
+        cd ..
+        
     - name: Install compilers
       run: |
         sudo apt update
