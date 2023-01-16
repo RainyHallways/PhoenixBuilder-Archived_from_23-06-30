@@ -44,6 +44,7 @@ jobs:
       
     - name: Install mingw-w64
       run: |
+        ls -il
         sudo apt update
         sudo apt install mingw-w64
         sudo apt install gcc-mingw-w64
