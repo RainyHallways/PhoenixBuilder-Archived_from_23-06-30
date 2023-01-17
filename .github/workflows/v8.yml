@@ -1,0 +1,38 @@
+name: v8
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "version"
+      - "fyne-gui/version"
+  workflow_dispatch: {}
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-22.04
+    steps:
+      
+    - name: Checkout repo
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+      
+    - name: clone gv8
+      run: |
+        mkdir v8_ops && cd v8_ops
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        cd ..
+        
+    - name: Archive binaries
+      run: |
+        tar -czf v8.tar.gz v8_ops
+
+    - name: Release
+      uses: softprops/action-gh-release@v0.1.14
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
+      with:
+        tag_name: V8.rel
+        files: |
+          v8.tar.gz
