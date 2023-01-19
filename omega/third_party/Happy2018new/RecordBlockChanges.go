@@ -42,15 +42,7 @@ func (o *RecordBlockChanges) Inject(frame defines.MainFrame) {
 	o.FileName = "RecordBlockChanges.Happy2018new"
 }
 
-func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBlock, recoverCount int) {
-	defer func() {
-		recover()
-		recoverCount++
-		if recoverCount <= 5 {
-			time.Sleep(time.Millisecond * 50)
-			o.RequestBlockChangesInfo(BlockInfo, recoverCount)
-		}
-	}()
+func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBlock) {
 	var blockName_Result string = "air"
 	var resp packet.CommandOutput
 	var operator []string = []string{}
@@ -59,6 +51,18 @@ func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBloc
 		func(output *packet.CommandOutput) {
 			resp = *output
 			if resp.SuccessCount <= 0 {
+				if resp.OutputMessages == nil {
+					return
+				}
+				if len(resp.OutputMessages) <= 0 {
+					return
+				}
+				if resp.OutputMessages[0].Parameters == nil {
+					return
+				}
+				if len(resp.OutputMessages[0].Parameters) <= 4 {
+					return
+				}
 				blockName_Result = resp.OutputMessages[0].Parameters[3]
 				blockName_Result = strings.Replace(blockName_Result, fmt.Sprintf("%vtile.", "%"), "", 1)
 				blockName_Result = strings.Replace(blockName_Result, ".name", "", 1)
@@ -343,9 +347,10 @@ func (o *RecordBlockChanges) Activate() {
 	if o.IsOutputJsonDatas {
 		o.StatisticsDatas()
 	}
-	time.Sleep(5 * time.Second)
 	o.Frame.GetGameListener().SetOnTypedPacketCallBack(packet.IDUpdateBlock, func(p packet.Packet) {
-		o.RequestBlockChangesInfo(*p.(*packet.UpdateBlock), 0)
+		go func() {
+			o.RequestBlockChangesInfo(*p.(*packet.UpdateBlock))
+		}()
 	})
 }
 
