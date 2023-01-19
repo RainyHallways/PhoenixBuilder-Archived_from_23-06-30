@@ -45,6 +45,7 @@ func (o *RecordBlockChanges) Inject(frame defines.MainFrame) {
 func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBlock) {
 	defer func() {
 		recover()
+		time.Sleep(time.Millisecond * 50)
 		o.RequestBlockChangesInfo(BlockInfo)
 	}()
 	var blockName_Result string = "air"
@@ -339,6 +340,7 @@ func (o *RecordBlockChanges) Activate() {
 	if o.IsOutputJsonDatas {
 		o.StatisticsDatas()
 	}
+	time.Sleep(5 * time.Second)
 	o.Frame.GetGameListener().SetOnTypedPacketCallBack(packet.IDUpdateBlock, func(p packet.Packet) {
 		o.RequestBlockChangesInfo(*p.(*packet.UpdateBlock))
 	})
