@@ -44,10 +44,7 @@ func (o *RecordBlockChanges) Inject(frame defines.MainFrame) {
 
 func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBlock) {
 	defer func() {
-		err := recover()
-		if err != nil {
-			o.RequestBlockChangesInfo(BlockInfo)
-		}
+		recover()
 	}()
 	var blockName_Result string = "air"
 	var resp packet.CommandOutput
