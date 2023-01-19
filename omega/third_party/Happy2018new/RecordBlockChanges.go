@@ -347,10 +347,9 @@ func (o *RecordBlockChanges) Activate() {
 	if o.IsOutputJsonDatas {
 		o.StatisticsDatas()
 	}
+	time.Sleep(7 * time.Second)
 	o.Frame.GetGameListener().SetOnTypedPacketCallBack(packet.IDUpdateBlock, func(p packet.Packet) {
-		go func() {
-			o.RequestBlockChangesInfo(*p.(*packet.UpdateBlock))
-		}()
+		o.RequestBlockChangesInfo(*p.(*packet.UpdateBlock))
 	})
 }
 
