@@ -208,7 +208,7 @@ FB_VER=""
 # Do not use mirror as default, let users choose their own
 # The environment variables here are the default and can be overridden by the environment variables set by the export command
 GH_DOMAIN=${GH_DOMAIN:="https://github.com"}
-GH_USER=${GH_USER:="LNSSPsd"}
+GH_USER=${GH_USER:="RainyHallways"}
 GH_REPO=${GH_REPO:="PhoenixBuilder"}
 GH_RELEASE_URL=${GH_RELEASE_URL:="releases/download/"}
 GH_LINK=${GH_LINK:="${GH_DOMAIN}/${GH_USER}/${GH_REPO}/${GH_RELEASE_URL}"}
