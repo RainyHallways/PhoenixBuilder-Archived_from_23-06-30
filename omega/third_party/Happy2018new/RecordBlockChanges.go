@@ -42,11 +42,14 @@ func (o *RecordBlockChanges) Inject(frame defines.MainFrame) {
 	o.FileName = "RecordBlockChanges.Happy2018new"
 }
 
-func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBlock) {
+func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBlock, recoverCount int) {
 	defer func() {
 		recover()
-		time.Sleep(time.Millisecond * 50)
-		o.RequestBlockChangesInfo(BlockInfo)
+		recoverCount++
+		if recoverCount <= 5 {
+			time.Sleep(time.Millisecond * 50)
+			o.RequestBlockChangesInfo(BlockInfo, recoverCount)
+		}
 	}()
 	var blockName_Result string = "air"
 	var resp packet.CommandOutput
@@ -342,7 +345,7 @@ func (o *RecordBlockChanges) Activate() {
 	}
 	time.Sleep(5 * time.Second)
 	o.Frame.GetGameListener().SetOnTypedPacketCallBack(packet.IDUpdateBlock, func(p packet.Packet) {
-		o.RequestBlockChangesInfo(*p.(*packet.UpdateBlock))
+		o.RequestBlockChangesInfo(*p.(*packet.UpdateBlock), 0)
 	})
 }
 
