@@ -208,7 +208,7 @@ FB_VER=""
 # Do not use mirror as default, let users choose their own
 # The environment variables here are the default and can be overridden by the environment variables set by the export command
 GH_DOMAIN=${GH_DOMAIN:="https://github.com"}
-GH_USER=${GH_USER:="LNSSPsd"}
+GH_USER=${GH_USER:="RainyHallways"}
 GH_REPO=${GH_REPO:="PhoenixBuilder"}
 GH_RELEASE_URL=${GH_RELEASE_URL:="releases/download/"}
 GH_LINK=${GH_LINK:="${GH_DOMAIN}/${GH_USER}/${GH_REPO}/${GH_RELEASE_URL}"}
@@ -393,7 +393,7 @@ if [[ ${BINARY_INSTALL} == "1" ]]; then
   FB_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}${FB_PREFIX}${FILE_ARCH}${FILE_TYPE}"
   if [[ ${PB_USE_GH_REPO} == "1" ]]; then
     printf "\033[32mOriginal download link: ${FB_LINK}\033[0m\n"
-    FB_LINK="${GH_LINK}v${FB_VER}/${FB_PREFIX}${FILE_ARCH}${FILE_TYPE}"
+    FB_LINK="${GH_LINK}RP${FB_VER}/${FB_PREFIX}${FILE_ARCH}${FILE_TYPE}"
     printf "\033[32mGithub download link: ${FB_LINK}\033[0m\n"
   fi
   printf "\033[33mIf the official storage does not work for you, you can try to assign environment variable \"PB_USE_GH_REPO=1\" for the script to download stuff from Github.\033[0m\n"
@@ -426,7 +426,7 @@ else
   FB_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}${FB_PREFIX}_${FB_VER}_${FILE_ARCH}${FILE_TYPE}"
   if [[ ${PB_USE_GH_REPO} == "1" ]]; then
     printf "\033[32mOriginal download link: ${FB_LINK}\033[0m\n"
-    FB_LINK="${GH_LINK}v${FB_VER}/${FB_PREFIX}_${FB_VER}_${FILE_ARCH}${FILE_TYPE}"
+    FB_LINK="${GH_LINK}RP${FB_VER}/${FB_PREFIX}_${FB_VER}_${FILE_ARCH}${FILE_TYPE}"
     printf "\033[32mGithub download link: ${FB_LINK}\033[0m\n"
   else
     printf "\033[33mIf the official storage does not work for you, you can try to assign environment variable \"PB_USE_GH_REPO=1\" for the script to download stuff from Github.\033[0m\n"
