@@ -9,14 +9,17 @@ import (
 	"phoenixbuilder/omega/defines"
 	"strings"
 	"time"
+
+	"github.com/pterm/pterm"
 )
 
 type RecordBlockChanges struct {
 	*defines.BasicComponent
-	MaxPlayerRecord        int     `json:"每次至多追踪的玩家数"`
-	IsOutputJsonDatas      bool    `json:"启动本组件时统计数据并输出 JSON 日志"`
-	MaxCountToRecord       int     `json:"允许的最大日志数"`
 	DiscardUnknwonOperator bool    `json:"丢弃未知操作来源的方块"`
+	IsOutputJsonDatas      bool    `json:"启动本组件时统计数据并输出 JSON 日志"`
+	OutputToCMD            bool    `json:"在控制台实时打印方块变动记录"`
+	MaxCountToRecord       int     `json:"允许的最大日志数"`
+	MaxPlayerRecord        int     `json:"每次至多追踪的玩家数"`
 	TrackingRadius         float64 `json:"追踪半径"`
 	FileName               string  `json:"文件名称"`
 	DelayTime              int     `json:"Omega 启动时本组件的延迟启动时间(单位为秒)"`
@@ -110,6 +113,16 @@ func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBloc
 							Situation:        BlockInfo.Flags,
 							Operator:         operator,
 						})
+					}
+					if o.OutputToCMD && o.DiscardUnknwonOperator && resp.SuccessCount > 0 {
+						value := o.DataReceived[len(o.DataReceived)-1]
+						pterm.Info.Printf("记录方块改动日志: (%v,%v,%v) 处的方块有更新，内容如下\n", BlockInfo.Position.X(), BlockInfo.Position.Y(), BlockInfo.Position.Z())
+						pterm.Info.Printf("操作时间: %v | 关联的方块名: %v | 可能的操作者: %v | 附加数据: %v\n", value.Time, value.BlockName_Result, value.Operator, value.Situation)
+					}
+					if o.OutputToCMD && !o.DiscardUnknwonOperator {
+						value := o.DataReceived[len(o.DataReceived)-1]
+						pterm.Info.Printf("记录方块改动日志: (%v,%v,%v) 处的方块有更新，内容如下\n", BlockInfo.Position.X(), BlockInfo.Position.Y(), BlockInfo.Position.Z())
+						pterm.Info.Printf("操作时间: %v | 关联的方块名: %v | 可能的操作者: %v | 附加数据: %v\n", value.Time, value.BlockName_Result, value.Operator, value.Situation)
 					}
 				},
 			)
