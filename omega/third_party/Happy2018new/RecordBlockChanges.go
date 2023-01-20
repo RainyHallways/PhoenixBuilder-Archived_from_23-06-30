@@ -162,13 +162,11 @@ func (o *RecordBlockChanges) OutputDatas() []byte {
 	ans := []byte{}
 	// prepare
 	buf := bytes.NewBuffer([]byte{})
-	binary.Write(buf, binary.BigEndian, int32(len(o.DataReceived)))
+	binary.Write(buf, binary.BigEndian, uint32(len(o.DataReceived)))
 	ans = append(ans, buf.Bytes()...)
 	// data length
 	for _, value := range o.DataReceived {
-		buf := bytes.NewBuffer([]byte{})
-		binary.Write(buf, binary.BigEndian, int32(len([]byte(value.Time))))
-		ans = append(ans, buf.Bytes()...)
+		ans = append(ans, uint8(len(value.Time)))
 		ans = append(ans, []byte(value.Time)...)
 		// time
 		for _, val := range value.BlockPos {
@@ -177,18 +175,16 @@ func (o *RecordBlockChanges) OutputDatas() []byte {
 			ans = append(ans, buf.Bytes()...)
 		}
 		// pos
-		buf = bytes.NewBuffer([]byte{})
-		binary.Write(buf, binary.BigEndian, int32(len([]byte(value.BlockName_Result))))
-		ans = append(ans, buf.Bytes()...)
+		ans = append(ans, uint8(len(value.BlockName_Result)))
 		ans = append(ans, []byte(value.BlockName_Result)...)
 		// blockName_Result
 		buf = bytes.NewBuffer([]byte{})
-		binary.Write(buf, binary.BigEndian, int32(len([]byte(value.BlockStates_Result))))
+		binary.Write(buf, binary.BigEndian, uint16(len([]byte(value.BlockStates_Result))))
 		ans = append(ans, buf.Bytes()...)
 		ans = append(ans, []byte(value.BlockStates_Result)...)
 		// blockStates_Result
 		buf = bytes.NewBuffer([]byte{})
-		binary.Write(buf, binary.BigEndian, int32(len([]byte(value.BlockNBT))))
+		binary.Write(buf, binary.BigEndian, uint32(len([]byte(value.BlockNBT))))
 		ans = append(ans, buf.Bytes()...)
 		ans = append(ans, []byte(value.BlockNBT)...)
 		// blockNBT
@@ -196,13 +192,9 @@ func (o *RecordBlockChanges) OutputDatas() []byte {
 		binary.Write(buf, binary.BigEndian, value.Situation)
 		ans = append(ans, buf.Bytes()...)
 		// situation
-		buf = bytes.NewBuffer([]byte{})
-		binary.Write(buf, binary.BigEndian, int32(len(value.Operator)))
-		ans = append(ans, buf.Bytes()...)
+		ans = append(ans, uint8(len(value.Operator)))
 		for _, val := range value.Operator {
-			buf = bytes.NewBuffer([]byte{})
-			binary.Write(buf, binary.BigEndian, int32(len([]byte(val))))
-			ans = append(ans, buf.Bytes()...)
+			ans = append(ans, uint8(len(val)))
 			ans = append(ans, []byte(val)...)
 		}
 		// operator
@@ -236,24 +228,19 @@ func (o *RecordBlockChanges) GetDatas() {
 	}
 	// get length
 	buf := bytes.NewBuffer(p)
-	var length int32
+	var length uint32
 	binary.Read(buf, binary.BigEndian, &length)
 	// decode length
-	if length > int32(o.MaxCountToRecord) && o.MaxCountToRecord != -1 {
+	if int(length) > o.MaxCountToRecord && o.MaxCountToRecord != -1 {
 		panic(fmt.Sprintf("当前日志可能过大，现在已经记录了 %v 条日志，而配置中最多允许出现 %v 条日志", length, o.MaxCountToRecord))
 	}
 	// 如果超过最大记录数量，就报错处理
 	for i := 0; i < int(length); i++ {
-		p = make([]byte, 4)
-		n, err = reader.Read(p)
-		if n < 4 || err != nil {
+		timeLength, err := reader.ReadByte()
+		if err != nil {
 			panic("无法读取保存的文件，请检查您的文件是否已经损坏！")
 		}
 		// get length of time
-		buf = bytes.NewBuffer(p)
-		var timeLength int32
-		binary.Read(buf, binary.BigEndian, &timeLength)
-		// decode length of time
 		p = make([]byte, timeLength)
 		n, err = reader.Read(p)
 		if n < int(timeLength) || err != nil {
@@ -276,16 +263,11 @@ func (o *RecordBlockChanges) GetDatas() {
 			pos[j] = posSingle
 		}
 		// blockPos
-		p = make([]byte, 4)
-		n, err = reader.Read(p)
-		if n < 4 || err != nil {
+		blockName_Result_length, err := reader.ReadByte()
+		if err != nil {
 			panic("无法读取保存的文件，请检查您的文件是否已经损坏！")
 		}
 		// get length of blockName_Result
-		buf = bytes.NewBuffer(p)
-		var blockName_Result_length int32
-		binary.Read(buf, binary.BigEndian, &blockName_Result_length)
-		// decode length of blockName_Result
 		p = make([]byte, blockName_Result_length)
 		n, err = reader.Read(p)
 		if n < int(blockName_Result_length) || err != nil {
@@ -293,14 +275,14 @@ func (o *RecordBlockChanges) GetDatas() {
 		}
 		blockName_Result := string(p)
 		// blockName_Result
-		p = make([]byte, 4)
+		p = make([]byte, 2)
 		n, err = reader.Read(p)
-		if n < 4 || err != nil {
+		if n < 2 || err != nil {
 			panic("无法读取保存的文件，请检查您的文件是否已经损坏！")
 		}
 		// get length of blockStates_Result
 		buf = bytes.NewBuffer(p)
-		var blockStates_Result_length int32
+		var blockStates_Result_length uint16
 		binary.Read(buf, binary.BigEndian, &blockStates_Result_length)
 		// decode length of blockStates_Result
 		p = make([]byte, blockStates_Result_length)
@@ -317,7 +299,7 @@ func (o *RecordBlockChanges) GetDatas() {
 		}
 		// get length of blockNBT
 		buf = bytes.NewBuffer(p)
-		var blockNBT_length int32
+		var blockNBT_length uint32
 		binary.Read(buf, binary.BigEndian, &blockNBT_length)
 		// decode length of blockNBT
 		p = make([]byte, blockNBT_length)
@@ -337,28 +319,18 @@ func (o *RecordBlockChanges) GetDatas() {
 		var situation uint32
 		binary.Read(buf, binary.BigEndian, &situation)
 		// decode situation
-		p = make([]byte, 4)
-		n, err = reader.Read(p)
-		if n < 4 || err != nil {
+		operatorLength, err := reader.ReadByte()
+		if err != nil {
 			panic("无法读取保存的文件，请检查您的文件是否已经损坏！")
 		}
 		// get length of operator
-		buf = bytes.NewBuffer(p)
-		var operatorLength int32
-		binary.Read(buf, binary.BigEndian, &operatorLength)
-		// decode length of operator
 		operator := []string{}
 		for j := 0; j < int(operatorLength); j++ {
-			p = make([]byte, 4)
-			n, err = reader.Read(p)
-			if n < 4 || err != nil {
+			operatorSingleLength, err := reader.ReadByte()
+			if err != nil {
 				panic("无法读取保存的文件，请检查您的文件是否已经损坏！")
 			}
 			// get length of operator(single)
-			buf = bytes.NewBuffer(p)
-			var operatorSingleLength int32
-			binary.Read(buf, binary.BigEndian, &operatorSingleLength)
-			// decode length of operator(single)
 			p = make([]byte, operatorSingleLength)
 			n, err = reader.Read(p)
 			if n < int(operatorSingleLength) || err != nil {
@@ -367,6 +339,7 @@ func (o *RecordBlockChanges) GetDatas() {
 			operator = append(operator, string(p))
 			// operator(single)
 		}
+		// operator
 		ans = append(ans, struct {
 			Time               string
 			BlockPos           [3]int32
