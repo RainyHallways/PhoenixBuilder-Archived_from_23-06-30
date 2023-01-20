@@ -7,6 +7,7 @@ import (
 	"phoenixbuilder/omega/third_party/Happy2018new"
 	"phoenixbuilder/omega/third_party/example"
 	"phoenixbuilder/omega/third_party/liliya"
+	"phoenixbuilder/omega/third_party/sunlife"
 )
 
 type NameSpace string
@@ -63,4 +64,5 @@ func init() {
 	mountComponents(example.NAMESPACE, example.Components, example.DefaultComponentConfigByte)
 	mountComponents(liliya.NAMESPACE, liliya.Components, liliya.DefaultComponentConfigByte)
 	mountComponents(Happy2018new.NAMESPACE, Happy2018new.Components, Happy2018new.DefaultComponentConfigByte)
+	mountComponents(sunlife.NAMESPACE, sunlife.Components, sunlife.DefaultComponentConfigByte)
 }
