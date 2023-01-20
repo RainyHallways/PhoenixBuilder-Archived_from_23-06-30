@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"phoenixbuilder/minecraft/protocol/packet"
 	"phoenixbuilder/omega/defines"
+	Happy2018new_depends "phoenixbuilder/omega/third_party/Happy2018new/depends"
 	"strings"
 	"time"
 
@@ -15,117 +16,128 @@ import (
 
 type RecordBlockChanges struct {
 	*defines.BasicComponent
-	DiscardUnknwonOperator bool    `json:"丢弃未知操作来源的方块"`
-	IsOutputJsonDatas      bool    `json:"启动本组件时统计数据并输出 JSON 日志"`
-	OutputToCMD            bool    `json:"在控制台实时打印方块变动记录"`
-	MaxCountToRecord       int     `json:"允许的最大日志数(填 -1 则跳过检查)"`
-	MaxPlayerRecord        int     `json:"每次至多追踪的玩家数"`
-	TrackingRadius         float64 `json:"追踪半径"`
-	FileName               string  `json:"文件名称"`
-	DelayTime              int     `json:"Omega 启动时本组件的延迟启动时间(单位为秒)"`
-	DataReceived           []struct {
+	ListenPacketUpdateBlock     bool     `json:"是否监听 packet.UpdateBlock(21号) 包"`
+	ListenPacketBlockActor      bool     `json:"是否监听 packet.BlockActor(56号) 包"`
+	DiscardUnknwonOperator      bool     `json:"丢弃未知操作来源的方块"`
+	OutputJsonDatasAndCloseThis bool     `json:"下次启动本组件时统计日志为 JSON 形式然后关闭组件"`
+	OutputToCMD                 bool     `json:"在控制台实时打印方块变动记录"`
+	OnlyRecordList              []string `json:"只记录下列方块"`
+	MaxCountToRecord            int      `json:"允许的最大日志数(填 -1 则跳过检查)"`
+	MaxPlayerRecord             int      `json:"每次至多追踪的玩家数"`
+	TrackingRadius              float64  `json:"追踪半径"`
+	FileName                    string   `json:"文件名称"`
+	TimeToSaveChanges           int      `json:"文件保存频率(单位为分钟, 需填写整数)"`
+	OnlyRecordMap               map[string]bool
+	RunTimeIdTable              map[int]string
+	DataReceived                []struct {
 		Time             string
 		BlockPos         [3]int32
 		BlockName_Result string
+		BlockNBT         string
 		Situation        uint32
 		Operator         []string
 	}
+	StartLengthOfDataReceived int
 }
 
-func (o *RecordBlockChanges) Init(settings *defines.ComponentConfig) {
-	marshal, _ := json.Marshal(settings.Configs)
-	if err := json.Unmarshal(marshal, o); err != nil {
-		panic(err)
-	}
-	if o.MaxPlayerRecord <= 0 {
-		o.MaxPlayerRecord = 1
-	}
-}
-
-func (o *RecordBlockChanges) Inject(frame defines.MainFrame) {
-	o.Frame = frame
-	if o.FileName == "" {
-		o.FileName = ".Happy2018new"
+func (o *RecordBlockChanges) InitExcludeMap() {
+	o.OnlyRecordMap = map[string]bool{}
+	// prepare
+	for _, value := range o.OnlyRecordList {
+		o.OnlyRecordMap[value] = true
 	}
 }
 
-func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBlock) {
-	var blockName_Result string = "air"
+func (o *RecordBlockChanges) BeSureThatDiscardOperator(blockName string) bool {
+	if len(o.OnlyRecordMap) > 0 {
+		_, ok := o.OnlyRecordMap[blockName]
+		return ok
+	}
+	return true
+}
+
+func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBlock, BlockNBT map[string]interface{}) {
+	var blockName_Result string = "unknown"
 	var resp packet.CommandOutput
 	var operator []string = []string{}
+	var stringNBT string = "undefined"
+	var err error
+	// prepare
+	if BlockNBT != nil {
+		stringNBT, err = Happy2018new_depends.Compound(BlockNBT, false)
+		if err != nil {
+			stringNBT = "undefined"
+		}
+	}
+	// parse block nbt to string nbt
+	blockName, ok := o.RunTimeIdTable[int(BlockInfo.NewBlockRuntimeID)]
+	if ok {
+		blockName_Result = blockName
+	}
+	// get block name
+	if BlockInfo.Flags == 32768 {
+		blockName_Result = "unknown"
+		BlockInfo.Flags = 0
+	}
+	// if the packet is packet.BlockActorData
+	if !o.BeSureThatDiscardOperator(blockName_Result) {
+		return
+	}
+	// if need to discard this operation
+	resp = packet.CommandOutput{}
 	o.Frame.GetGameControl().SendCmdAndInvokeOnResponse(
-		fmt.Sprintf("testforblock %v %v %v air", BlockInfo.Position.X(), BlockInfo.Position.Y(), BlockInfo.Position.Z()),
+		fmt.Sprintf("testfor @a[c=%v,x=%v,y=%v,z=%v,r=%v,name=!\"%v\"]", o.MaxPlayerRecord, BlockInfo.Position.X(), BlockInfo.Position.Y(), BlockInfo.Position.Z(), o.TrackingRadius, o.Frame.GetUQHolder().GetBotName()),
 		func(output *packet.CommandOutput) {
 			resp = *output
-			if resp.SuccessCount <= 0 {
-				if resp.OutputMessages == nil {
-					return
-				}
-				if len(resp.OutputMessages) <= 0 {
-					return
-				}
-				if resp.OutputMessages[0].Parameters == nil {
-					return
-				}
-				if len(resp.OutputMessages[0].Parameters) <= 4 {
-					return
-				}
-				blockName_Result = resp.OutputMessages[0].Parameters[3]
-				blockName_Result = strings.Replace(blockName_Result, fmt.Sprintf("%vtile.", "%"), "", 1)
-				blockName_Result = strings.Replace(blockName_Result, ".name", "", 1)
+			if resp.SuccessCount > 0 {
+				operator = strings.Split(resp.OutputMessages[0].Parameters[0], ", ")
+			} else {
+				operator = []string{"unknown"}
 			}
-			resp = packet.CommandOutput{}
-			o.Frame.GetGameControl().SendCmdAndInvokeOnResponse(
-				fmt.Sprintf("testfor @a[c=%v,x=%v,y=%v,z=%v,r=%v]", o.MaxPlayerRecord, BlockInfo.Position.X(), BlockInfo.Position.Y(), BlockInfo.Position.Z(), o.TrackingRadius),
-				func(output *packet.CommandOutput) {
-					resp = *output
-					if resp.SuccessCount > 0 {
-						operator = strings.Split(resp.OutputMessages[0].Parameters[0], ", ")
-					} else {
-						operator = []string{"unknown"}
-					}
-					if o.DiscardUnknwonOperator && resp.SuccessCount > 0 {
-						o.DataReceived = append(o.DataReceived, struct {
-							Time             string
-							BlockPos         [3]int32
-							BlockName_Result string
-							Situation        uint32
-							Operator         []string
-						}{
-							Time:             time.Now().Format("2006-01-02 15:04:05"),
-							BlockPos:         BlockInfo.Position,
-							BlockName_Result: blockName_Result,
-							Situation:        BlockInfo.Flags,
-							Operator:         operator,
-						})
-					}
-					if !o.DiscardUnknwonOperator {
-						o.DataReceived = append(o.DataReceived, struct {
-							Time             string
-							BlockPos         [3]int32
-							BlockName_Result string
-							Situation        uint32
-							Operator         []string
-						}{
-							Time:             time.Now().Format("2006-01-02 15:04:05"),
-							BlockPos:         BlockInfo.Position,
-							BlockName_Result: blockName_Result,
-							Situation:        BlockInfo.Flags,
-							Operator:         operator,
-						})
-					}
-					if o.OutputToCMD && o.DiscardUnknwonOperator && resp.SuccessCount > 0 {
-						value := o.DataReceived[len(o.DataReceived)-1]
-						pterm.Info.Printf("记录方块改动日志: (%v,%v,%v) 处的方块有更新，内容如下\n", BlockInfo.Position.X(), BlockInfo.Position.Y(), BlockInfo.Position.Z())
-						pterm.Info.Printf("操作时间: %v | 关联的方块名: %v | 可能的操作者: %v | 附加数据: %v\n", value.Time, value.BlockName_Result, value.Operator, value.Situation)
-					}
-					if o.OutputToCMD && !o.DiscardUnknwonOperator {
-						value := o.DataReceived[len(o.DataReceived)-1]
-						pterm.Info.Printf("记录方块改动日志: (%v,%v,%v) 处的方块有更新，内容如下\n", BlockInfo.Position.X(), BlockInfo.Position.Y(), BlockInfo.Position.Z())
-						pterm.Info.Printf("操作时间: %v | 关联的方块名: %v | 可能的操作者: %v | 附加数据: %v\n", value.Time, value.BlockName_Result, value.Operator, value.Situation)
-					}
-				},
-			)
+			if o.DiscardUnknwonOperator && resp.SuccessCount > 0 {
+				o.DataReceived = append(o.DataReceived, struct {
+					Time             string
+					BlockPos         [3]int32
+					BlockName_Result string
+					BlockNBT         string
+					Situation        uint32
+					Operator         []string
+				}{
+					Time:             time.Now().Format("2006-01-02 15:04:05"),
+					BlockPos:         BlockInfo.Position,
+					BlockName_Result: blockName_Result,
+					BlockNBT:         stringNBT,
+					Situation:        BlockInfo.Flags,
+					Operator:         operator,
+				})
+			}
+			if !o.DiscardUnknwonOperator {
+				o.DataReceived = append(o.DataReceived, struct {
+					Time             string
+					BlockPos         [3]int32
+					BlockName_Result string
+					BlockNBT         string
+					Situation        uint32
+					Operator         []string
+				}{
+					Time:             time.Now().Format("2006-01-02 15:04:05"),
+					BlockPos:         BlockInfo.Position,
+					BlockName_Result: blockName_Result,
+					BlockNBT:         stringNBT,
+					Situation:        BlockInfo.Flags,
+					Operator:         operator,
+				})
+			}
+			if o.OutputToCMD && o.DiscardUnknwonOperator && resp.SuccessCount > 0 {
+				value := o.DataReceived[len(o.DataReceived)-1]
+				pterm.Info.Printf("记录方块改动日志: (%v,%v,%v) 处的方块有更新，内容如下\n", BlockInfo.Position.X(), BlockInfo.Position.Y(), BlockInfo.Position.Z())
+				pterm.Info.Printf("操作时间: %v | 关联的方块名: %v | 关联的 NBT 数据: %v | 可能的操作者: %v | 附加数据: %v\n", value.Time, value.BlockName_Result, value.BlockNBT, value.Operator, value.Situation)
+			}
+			if o.OutputToCMD && !o.DiscardUnknwonOperator {
+				value := o.DataReceived[len(o.DataReceived)-1]
+				pterm.Info.Printf("记录方块改动日志: (%v,%v,%v) 处的方块有更新，内容如下\n", BlockInfo.Position.X(), BlockInfo.Position.Y(), BlockInfo.Position.Z())
+				pterm.Info.Printf("操作时间: %v | 关联的方块名: %v | 关联的 NBT 数据: %v | 可能的操作者: %v | 附加数据: %v\n", value.Time, value.BlockName_Result, value.BlockNBT, value.Operator, value.Situation)
+			}
 		},
 	)
 }
@@ -155,6 +167,11 @@ func (o *RecordBlockChanges) OutputDatas() []byte {
 		ans = append(ans, []byte(value.BlockName_Result)...)
 		// blockName_Result
 		buf = bytes.NewBuffer([]byte{})
+		binary.Write(buf, binary.BigEndian, int32(len([]byte(value.BlockNBT))))
+		ans = append(ans, buf.Bytes()...)
+		ans = append(ans, []byte(value.BlockNBT)...)
+		// blockNBT
+		buf = bytes.NewBuffer([]byte{})
 		binary.Write(buf, binary.BigEndian, value.Situation)
 		ans = append(ans, buf.Bytes()...)
 		// situation
@@ -169,7 +186,7 @@ func (o *RecordBlockChanges) OutputDatas() []byte {
 		}
 		// operator
 	}
-	return ans
+	return Happy2018new_depends.Compress(ans)
 }
 
 func (o *RecordBlockChanges) GetDatas() {
@@ -177,6 +194,7 @@ func (o *RecordBlockChanges) GetDatas() {
 		Time             string
 		BlockPos         [3]int32
 		BlockName_Result string
+		BlockNBT         string
 		Situation        uint32
 		Operator         []string
 	}{}
@@ -186,7 +204,9 @@ func (o *RecordBlockChanges) GetDatas() {
 		return
 	}
 	// prepare
-	reader := bytes.NewReader(got)
+	current := Happy2018new_depends.Decompress(got)
+	// decompress
+	reader := bytes.NewReader(current)
 	p := make([]byte, 4)
 	n, err := reader.Read(p)
 	if n < 4 || err != nil {
@@ -256,6 +276,23 @@ func (o *RecordBlockChanges) GetDatas() {
 		if n < 4 || err != nil {
 			panic("无法读取保存的文件，请检查您的文件是否已经损坏！")
 		}
+		// get length of blockNBT
+		buf = bytes.NewBuffer(p)
+		var blockNBT_length int32
+		binary.Read(buf, binary.BigEndian, &blockNBT_length)
+		// decode length of blockNBT
+		p = make([]byte, blockNBT_length)
+		n, err = reader.Read(p)
+		if n < int(blockNBT_length) || err != nil {
+			panic("无法读取保存的文件，请检查您的文件是否已经损坏！")
+		}
+		blockNBT := string(p)
+		// blockNBT
+		p = make([]byte, 4)
+		n, err = reader.Read(p)
+		if n < 4 || err != nil {
+			panic("无法读取保存的文件，请检查您的文件是否已经损坏！")
+		}
 		// get situation
 		buf = bytes.NewBuffer(p)
 		var situation uint32
@@ -295,12 +332,14 @@ func (o *RecordBlockChanges) GetDatas() {
 			Time             string
 			BlockPos         [3]int32
 			BlockName_Result string
+			BlockNBT         string
 			Situation        uint32
 			Operator         []string
 		}{
 			Time:             time,
 			BlockPos:         pos,
 			BlockName_Result: blockName_Result,
+			BlockNBT:         blockNBT,
 			Situation:        situation,
 			Operator:         operator,
 		})
@@ -317,10 +356,12 @@ func (o *RecordBlockChanges) StatisticsDatas() {
 	type single struct {
 		Time             string
 		BlockName_Result string
+		BlockNBT         string
 		Situation        uint32
 		Operator         []string
 	}
 	type set []single
+	// prepare
 	blockCubeMap := map[blockCube]set{}
 	for _, value := range o.DataReceived {
 		got, ok := blockCubeMap[blockCube{value.BlockPos[0], value.BlockPos[1], value.BlockPos[2]}]
@@ -329,6 +370,7 @@ func (o *RecordBlockChanges) StatisticsDatas() {
 				single{
 					Time:             value.Time,
 					BlockName_Result: value.BlockName_Result,
+					BlockNBT:         value.BlockNBT,
 					Situation:        value.Situation,
 					Operator:         value.Operator,
 				},
@@ -337,6 +379,7 @@ func (o *RecordBlockChanges) StatisticsDatas() {
 			got = append(got, single{
 				Time:             value.Time,
 				BlockName_Result: value.BlockName_Result,
+				BlockNBT:         value.BlockNBT,
 				Situation:        value.Situation,
 				Operator:         value.Operator,
 			})
@@ -352,10 +395,11 @@ func (o *RecordBlockChanges) StatisticsDatas() {
 				operatorNew = append(operatorNew, v)
 			}
 			singleNew = append(singleNew, map[string]interface{}{
-				"操作时间":   val.Time,
-				"关联的方块名": val.BlockName_Result,
-				"附加数据":   float64(val.Situation),
-				"可能的操作者": operatorNew,
+				"操作时间":       val.Time,
+				"关联的方块名":     val.BlockName_Result,
+				"关联的 NBT 数据": val.BlockNBT,
+				"附加数据":       float64(val.Situation),
+				"可能的操作者":     operatorNew,
 			})
 		}
 		new[fmt.Sprintf("方块 (%v,%v,%v)", key.Posx, key.Posy, key.Posz)] = singleNew
@@ -363,26 +407,81 @@ func (o *RecordBlockChanges) StatisticsDatas() {
 	o.Frame.WriteJsonData(fmt.Sprintf("%v.json", o.FileName), new)
 }
 
-func (o *RecordBlockChanges) Activate() {
-	o.GetDatas()
-	if o.IsOutputJsonDatas {
-		o.StatisticsDatas()
+func (o *RecordBlockChanges) Init(settings *defines.ComponentConfig) {
+	marshal, _ := json.Marshal(settings.Configs)
+	if err := json.Unmarshal(marshal, o); err != nil {
+		panic(err)
 	}
-	time.Sleep(time.Duration(o.DelayTime) * time.Second)
-	o.Frame.GetGameListener().SetOnTypedPacketCallBack(packet.IDUpdateBlock, func(p packet.Packet) {
-		o.RequestBlockChangesInfo(*p.(*packet.UpdateBlock))
-	})
+	if o.MaxPlayerRecord <= 0 {
+		o.MaxPlayerRecord = 1
+	}
+	// init MaxPlayerRecord
+	if o.TimeToSaveChanges <= 0 {
+		o.TimeToSaveChanges = 1
+	}
+	// init RecordBlockChangesTime
+	o.RunTimeIdTable = Happy2018new_depends.InitRunTimeIdTable()
+	// init block run timeid table
+	o.InitExcludeMap()
+	// init ExcludeMap
 }
 
-func (o *RecordBlockChanges) Signal(signal int) error {
-	switch signal {
-	case defines.SIGNAL_DATA_CHECKPOINT:
-		return o.Frame.WriteFileData(o.FileName, o.OutputDatas())
+func (o *RecordBlockChanges) Inject(frame defines.MainFrame) {
+	o.Frame = frame
+	if o.FileName == "" {
+		o.FileName = ".Happy2018new"
 	}
-	return nil
+}
+
+func (o *RecordBlockChanges) Activate() {
+	o.GetDatas()
+	o.StartLengthOfDataReceived = len(o.DataReceived)
+	if o.OutputJsonDatasAndCloseThis {
+		o.StatisticsDatas()
+		pterm.Success.Printf("记录方块改动日志: 已成功将 %v 统计为 JSON 形式，保存为 %v.json\n", o.FileName, o.FileName)
+		pterm.Info.Println("记录方块改动日志: 本组件已关闭")
+		return
+	}
+	// get logs from file
+	if o.ListenPacketUpdateBlock {
+		o.Frame.GetGameListener().SetOnTypedPacketCallBack(packet.IDUpdateBlock, func(p packet.Packet) {
+			o.RequestBlockChangesInfo(*p.(*packet.UpdateBlock), nil)
+		})
+	}
+	// listen packet.UpdateBlock
+	if o.ListenPacketBlockActor {
+		o.Frame.GetGameListener().SetOnTypedPacketCallBack(packet.IDBlockActorData, func(p packet.Packet) {
+			got := *p.(*packet.BlockActorData)
+			o.RequestBlockChangesInfo(packet.UpdateBlock{
+				Position: got.Position,
+				Flags:    32768,
+			}, got.NBTData)
+		})
+	}
+	// listen packet.BlockActorData
+	go func() {
+		o.SaveChanges()
+	}()
+	// 定时保存
+}
+
+func (o *RecordBlockChanges) SaveChanges() {
+	for {
+		length := len(o.DataReceived)
+		time.Sleep(time.Duration(o.TimeToSaveChanges) * time.Minute)
+		if length != len(o.DataReceived) {
+			err := o.Frame.WriteFileData(o.FileName, o.OutputDatas())
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
 }
 
 func (o *RecordBlockChanges) Stop() error {
-	fmt.Println("正在保存 " + o.FileName)
-	return o.Frame.WriteFileData(o.FileName, o.OutputDatas())
+	if !o.OutputJsonDatasAndCloseThis && o.StartLengthOfDataReceived != len(o.DataReceived) {
+		fmt.Println("正在保存 " + o.FileName)
+		return o.Frame.WriteFileData(o.FileName, o.OutputDatas())
+	}
+	return nil
 }
