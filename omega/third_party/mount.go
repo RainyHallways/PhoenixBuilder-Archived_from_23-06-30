@@ -7,6 +7,7 @@ import (
 	"phoenixbuilder/omega/third_party/Happy2018new"
 	"phoenixbuilder/omega/third_party/example"
 	"phoenixbuilder/omega/third_party/liliya"
+	"phoenixbuilder/omega/third_party/sunlife"
 )
 
 type NameSpace string
