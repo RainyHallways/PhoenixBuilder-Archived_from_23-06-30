@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"phoenixbuilder/minecraft/protocol/packet"
+	"phoenixbuilder/mirror/chunk"
 	"phoenixbuilder/omega/defines"
 	Happy2018new_depends "phoenixbuilder/omega/third_party/Happy2018new/depends"
 	"strings"
@@ -21,14 +22,13 @@ type RecordBlockChanges struct {
 	DiscardUnknwonOperator      bool     `json:"丢弃未知操作来源的方块"`
 	OutputJsonDatasAndCloseThis bool     `json:"下次启动本组件时统计日志为 JSON 形式然后关闭组件"`
 	OutputToCMD                 bool     `json:"在控制台实时打印方块变动记录"`
-	OnlyRecordList              []string `json:"只记录下列方块"`
+	OnlyRecordList              []string `json:"只记录下列方块(为空时将记录任何方块)"`
 	MaxCountToRecord            int      `json:"允许的最大日志数(填 -1 则跳过检查)"`
 	MaxPlayerRecord             int      `json:"每次至多追踪的玩家数"`
 	TrackingRadius              float64  `json:"追踪半径"`
 	FileName                    string   `json:"文件名称"`
 	TimeToSaveChanges           int      `json:"文件保存频率(单位为分钟, 需填写整数)"`
 	OnlyRecordMap               map[string]bool
-	RunTimeIdTable              map[int]string
 	DataReceived                []struct {
 		Time             string
 		BlockPos         [3]int32
@@ -70,9 +70,9 @@ func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBloc
 		}
 	}
 	// parse block nbt to string nbt
-	blockName, ok := o.RunTimeIdTable[int(BlockInfo.NewBlockRuntimeID)]
-	if ok {
-		blockName_Result = blockName
+	singleBlock, found := chunk.RuntimeIDToBlock(chunk.NEMCRuntimeIDToStandardRuntimeID(BlockInfo.NewBlockRuntimeID))
+	if found {
+		blockName_Result = singleBlock.Name
 	}
 	// get block name
 	if BlockInfo.Flags == 32768 {
@@ -420,8 +420,6 @@ func (o *RecordBlockChanges) Init(settings *defines.ComponentConfig) {
 		o.TimeToSaveChanges = 1
 	}
 	// init RecordBlockChangesTime
-	o.RunTimeIdTable = Happy2018new_depends.InitRunTimeIdTable()
-	// init block run timeid table
 	o.InitExcludeMap()
 	// init ExcludeMap
 }
