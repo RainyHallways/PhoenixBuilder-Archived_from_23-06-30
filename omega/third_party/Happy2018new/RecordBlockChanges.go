@@ -18,7 +18,7 @@ type RecordBlockChanges struct {
 	DiscardUnknwonOperator bool    `json:"丢弃未知操作来源的方块"`
 	IsOutputJsonDatas      bool    `json:"启动本组件时统计数据并输出 JSON 日志"`
 	OutputToCMD            bool    `json:"在控制台实时打印方块变动记录"`
-	MaxCountToRecord       int     `json:"允许的最大日志数"`
+	MaxCountToRecord       int     `json:"允许的最大日志数(填 -1 则跳过检查)"`
 	MaxPlayerRecord        int     `json:"每次至多追踪的玩家数"`
 	TrackingRadius         float64 `json:"追踪半径"`
 	FileName               string  `json:"文件名称"`
@@ -197,7 +197,7 @@ func (o *RecordBlockChanges) GetDatas() {
 	var length int32
 	binary.Read(buf, binary.BigEndian, &length)
 	// decode length
-	if length > int32(o.MaxCountToRecord) {
+	if length > int32(o.MaxCountToRecord) && o.MaxCountToRecord != -1 {
 		panic(fmt.Sprintf("当前日志可能过大，现在已经记录了 %v 条日志，而配置中最多允许出现 %v 条日志", length, o.MaxCountToRecord))
 	}
 	// 如果超过最大记录数量，就报错处理
