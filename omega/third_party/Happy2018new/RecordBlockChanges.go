@@ -30,12 +30,13 @@ type RecordBlockChanges struct {
 	TimeToSaveChanges           int      `json:"文件保存频率(单位为分钟, 需填写整数)"`
 	OnlyRecordMap               map[string]bool
 	DataReceived                []struct {
-		Time             string
-		BlockPos         [3]int32
-		BlockName_Result string
-		BlockNBT         string
-		Situation        uint32
-		Operator         []string
+		Time               string
+		BlockPos           [3]int32
+		BlockName_Result   string
+		BlockStates_Result string
+		BlockNBT           string
+		Situation          uint32
+		Operator           []string
 	}
 	StartLengthOfDataReceived int
 }
@@ -57,7 +58,8 @@ func (o *RecordBlockChanges) BeSureThatDiscardOperator(blockName string) bool {
 }
 
 func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBlock, BlockNBT map[string]interface{}) {
-	var blockName_Result string = "unknown"
+	var blockName_Result string
+	var blockStates_Result string
 	var resp packet.CommandOutput
 	var operator []string = []string{}
 	var stringNBT string = "undefined"
@@ -70,16 +72,26 @@ func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBloc
 		}
 	}
 	// parse block nbt to string nbt
-	singleBlock, found := chunk.RuntimeIDToBlock(chunk.NEMCRuntimeIDToStandardRuntimeID(BlockInfo.NewBlockRuntimeID))
-	if found {
-		blockName_Result = singleBlock.Name
-	}
-	// get block name
-	if BlockInfo.Flags == 32768 {
+	if BlockInfo.Flags != 32768 {
+		singleBlock, found := chunk.RuntimeIDToBlock(chunk.NEMCRuntimeIDToStandardRuntimeID(BlockInfo.NewBlockRuntimeID))
+		if found {
+			blockName_Result = singleBlock.Name
+		} else {
+			blockName_Result = "unknown"
+		}
+		// get block name
+		blockStates_Result, err = Happy2018new_depends.Compound(singleBlock.Properties, true)
+		if err != nil {
+			blockStates_Result = "undefined"
+		}
+		// get block states
+	} else {
 		blockName_Result = "unknown"
+		blockStates_Result = "undefined"
 		BlockInfo.Flags = 0
+		// if the packet is packet.BlockActorData
 	}
-	// if the packet is packet.BlockActorData
+	// get basic info
 	if !o.BeSureThatDiscardOperator(blockName_Result) {
 		return
 	}
@@ -96,47 +108,51 @@ func (o *RecordBlockChanges) RequestBlockChangesInfo(BlockInfo packet.UpdateBloc
 			}
 			if o.DiscardUnknwonOperator && resp.SuccessCount > 0 {
 				o.DataReceived = append(o.DataReceived, struct {
-					Time             string
-					BlockPos         [3]int32
-					BlockName_Result string
-					BlockNBT         string
-					Situation        uint32
-					Operator         []string
+					Time               string
+					BlockPos           [3]int32
+					BlockName_Result   string
+					BlockStates_Result string
+					BlockNBT           string
+					Situation          uint32
+					Operator           []string
 				}{
-					Time:             time.Now().Format("2006-01-02 15:04:05"),
-					BlockPos:         BlockInfo.Position,
-					BlockName_Result: blockName_Result,
-					BlockNBT:         stringNBT,
-					Situation:        BlockInfo.Flags,
-					Operator:         operator,
+					Time:               time.Now().Format("2006-01-02 15:04:05"),
+					BlockPos:           BlockInfo.Position,
+					BlockName_Result:   blockName_Result,
+					BlockStates_Result: blockStates_Result,
+					BlockNBT:           stringNBT,
+					Situation:          BlockInfo.Flags,
+					Operator:           operator,
 				})
 			}
 			if !o.DiscardUnknwonOperator {
 				o.DataReceived = append(o.DataReceived, struct {
-					Time             string
-					BlockPos         [3]int32
-					BlockName_Result string
-					BlockNBT         string
-					Situation        uint32
-					Operator         []string
+					Time               string
+					BlockPos           [3]int32
+					BlockName_Result   string
+					BlockStates_Result string
+					BlockNBT           string
+					Situation          uint32
+					Operator           []string
 				}{
-					Time:             time.Now().Format("2006-01-02 15:04:05"),
-					BlockPos:         BlockInfo.Position,
-					BlockName_Result: blockName_Result,
-					BlockNBT:         stringNBT,
-					Situation:        BlockInfo.Flags,
-					Operator:         operator,
+					Time:               time.Now().Format("2006-01-02 15:04:05"),
+					BlockPos:           BlockInfo.Position,
+					BlockName_Result:   blockName_Result,
+					BlockStates_Result: blockStates_Result,
+					BlockNBT:           stringNBT,
+					Situation:          BlockInfo.Flags,
+					Operator:           operator,
 				})
 			}
 			if o.OutputToCMD && o.DiscardUnknwonOperator && resp.SuccessCount > 0 {
 				value := o.DataReceived[len(o.DataReceived)-1]
 				pterm.Info.Printf("记录方块改动日志: (%v,%v,%v) 处的方块有更新，内容如下\n", BlockInfo.Position.X(), BlockInfo.Position.Y(), BlockInfo.Position.Z())
-				pterm.Info.Printf("操作时间: %v | 关联的方块名: %v | 关联的 NBT 数据: %v | 可能的操作者: %v | 附加数据: %v\n", value.Time, value.BlockName_Result, value.BlockNBT, value.Operator, value.Situation)
+				pterm.Info.Printf("操作时间: %v | 关联的方块名: %v | 关联的方块状态: %v | 关联的 NBT 数据: %v | 可能的操作者: %v | 附加数据: %v\n", value.Time, value.BlockName_Result, value.BlockStates_Result, value.BlockNBT, value.Operator, value.Situation)
 			}
 			if o.OutputToCMD && !o.DiscardUnknwonOperator {
 				value := o.DataReceived[len(o.DataReceived)-1]
 				pterm.Info.Printf("记录方块改动日志: (%v,%v,%v) 处的方块有更新，内容如下\n", BlockInfo.Position.X(), BlockInfo.Position.Y(), BlockInfo.Position.Z())
-				pterm.Info.Printf("操作时间: %v | 关联的方块名: %v | 关联的 NBT 数据: %v | 可能的操作者: %v | 附加数据: %v\n", value.Time, value.BlockName_Result, value.BlockNBT, value.Operator, value.Situation)
+				pterm.Info.Printf("操作时间: %v | 关联的方块名: %v | 关联的方块状态: %v | 关联的 NBT 数据: %v | 可能的操作者: %v | 附加数据: %v\n", value.Time, value.BlockName_Result, value.BlockStates_Result, value.BlockNBT, value.Operator, value.Situation)
 			}
 		},
 	)
@@ -167,6 +183,11 @@ func (o *RecordBlockChanges) OutputDatas() []byte {
 		ans = append(ans, []byte(value.BlockName_Result)...)
 		// blockName_Result
 		buf = bytes.NewBuffer([]byte{})
+		binary.Write(buf, binary.BigEndian, int32(len([]byte(value.BlockStates_Result))))
+		ans = append(ans, buf.Bytes()...)
+		ans = append(ans, []byte(value.BlockStates_Result)...)
+		// blockStates_Result
+		buf = bytes.NewBuffer([]byte{})
 		binary.Write(buf, binary.BigEndian, int32(len([]byte(value.BlockNBT))))
 		ans = append(ans, buf.Bytes()...)
 		ans = append(ans, []byte(value.BlockNBT)...)
@@ -191,12 +212,13 @@ func (o *RecordBlockChanges) OutputDatas() []byte {
 
 func (o *RecordBlockChanges) GetDatas() {
 	ans := []struct {
-		Time             string
-		BlockPos         [3]int32
-		BlockName_Result string
-		BlockNBT         string
-		Situation        uint32
-		Operator         []string
+		Time               string
+		BlockPos           [3]int32
+		BlockName_Result   string
+		BlockStates_Result string
+		BlockNBT           string
+		Situation          uint32
+		Operator           []string
 	}{}
 	got, err := o.Frame.GetFileData(o.FileName)
 	if len(got) <= 0 || err != nil {
@@ -276,6 +298,23 @@ func (o *RecordBlockChanges) GetDatas() {
 		if n < 4 || err != nil {
 			panic("无法读取保存的文件，请检查您的文件是否已经损坏！")
 		}
+		// get length of blockStates_Result
+		buf = bytes.NewBuffer(p)
+		var blockStates_Result_length int32
+		binary.Read(buf, binary.BigEndian, &blockStates_Result_length)
+		// decode length of blockStates_Result
+		p = make([]byte, blockStates_Result_length)
+		n, err = reader.Read(p)
+		if n < int(blockStates_Result_length) || err != nil {
+			panic("无法读取保存的文件，请检查您的文件是否已经损坏！")
+		}
+		blockStates_Result := string(p)
+		// blockStates_Result
+		p = make([]byte, 4)
+		n, err = reader.Read(p)
+		if n < 4 || err != nil {
+			panic("无法读取保存的文件，请检查您的文件是否已经损坏！")
+		}
 		// get length of blockNBT
 		buf = bytes.NewBuffer(p)
 		var blockNBT_length int32
@@ -329,19 +368,21 @@ func (o *RecordBlockChanges) GetDatas() {
 			// operator(single)
 		}
 		ans = append(ans, struct {
-			Time             string
-			BlockPos         [3]int32
-			BlockName_Result string
-			BlockNBT         string
-			Situation        uint32
-			Operator         []string
+			Time               string
+			BlockPos           [3]int32
+			BlockName_Result   string
+			BlockStates_Result string
+			BlockNBT           string
+			Situation          uint32
+			Operator           []string
 		}{
-			Time:             time,
-			BlockPos:         pos,
-			BlockName_Result: blockName_Result,
-			BlockNBT:         blockNBT,
-			Situation:        situation,
-			Operator:         operator,
+			Time:               time,
+			BlockPos:           pos,
+			BlockName_Result:   blockName_Result,
+			BlockStates_Result: blockStates_Result,
+			BlockNBT:           blockNBT,
+			Situation:          situation,
+			Operator:           operator,
 		})
 	}
 	o.DataReceived = ans
@@ -354,11 +395,12 @@ func (o *RecordBlockChanges) StatisticsDatas() {
 		Posz int32
 	}
 	type single struct {
-		Time             string
-		BlockName_Result string
-		BlockNBT         string
-		Situation        uint32
-		Operator         []string
+		Time               string
+		BlockName_Result   string
+		BlockStates_Result string
+		BlockNBT           string
+		Situation          uint32
+		Operator           []string
 	}
 	type set []single
 	// prepare
@@ -368,20 +410,22 @@ func (o *RecordBlockChanges) StatisticsDatas() {
 		if !ok {
 			blockCubeMap[blockCube{value.BlockPos[0], value.BlockPos[1], value.BlockPos[2]}] = set{
 				single{
-					Time:             value.Time,
-					BlockName_Result: value.BlockName_Result,
-					BlockNBT:         value.BlockNBT,
-					Situation:        value.Situation,
-					Operator:         value.Operator,
+					Time:               value.Time,
+					BlockName_Result:   value.BlockName_Result,
+					BlockStates_Result: value.BlockStates_Result,
+					BlockNBT:           value.BlockNBT,
+					Situation:          value.Situation,
+					Operator:           value.Operator,
 				},
 			}
 		} else {
 			got = append(got, single{
-				Time:             value.Time,
-				BlockName_Result: value.BlockName_Result,
-				BlockNBT:         value.BlockNBT,
-				Situation:        value.Situation,
-				Operator:         value.Operator,
+				Time:               value.Time,
+				BlockName_Result:   value.BlockName_Result,
+				BlockStates_Result: value.BlockStates_Result,
+				BlockNBT:           value.BlockNBT,
+				Situation:          value.Situation,
+				Operator:           value.Operator,
 			})
 			blockCubeMap[blockCube{value.BlockPos[0], value.BlockPos[1], value.BlockPos[2]}] = got
 		}
@@ -397,6 +441,7 @@ func (o *RecordBlockChanges) StatisticsDatas() {
 			singleNew = append(singleNew, map[string]interface{}{
 				"操作时间":       val.Time,
 				"关联的方块名":     val.BlockName_Result,
+				"关联的方块状态":    val.BlockStates_Result,
 				"关联的 NBT 数据": val.BlockNBT,
 				"附加数据":       float64(val.Situation),
 				"可能的操作者":     operatorNew,
