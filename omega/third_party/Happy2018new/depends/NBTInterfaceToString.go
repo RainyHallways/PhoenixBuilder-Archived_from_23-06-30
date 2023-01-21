@@ -54,7 +54,7 @@ func GetData(input interface{}) (string, error) {
 		}
 		// byte_array, int_array, long_array
 	case reflect.String:
-		return fmt.Sprintf("\"%v\"", input.(string)), nil
+		return fmt.Sprintf("\"%v\"", strings.Replace(input.(string), "\"", "\\\"", -1)), nil
 		// string
 	case reflect.Slice:
 		value := input.([]interface{})
@@ -79,6 +79,7 @@ func GetData(input interface{}) (string, error) {
 func Compound(input map[string]interface{}, outputBlockStatesMode bool) (string, error) {
 	ans := make([]string, 0)
 	for key, value := range input {
+		key = strings.Replace(key, "\"", "\\\"", -1)
 		if value == nil {
 			return "", fmt.Errorf("Compound: Crashed in input[\"%v\"]; errorLogs = value is nil; input = %#v", key, input)
 		}
