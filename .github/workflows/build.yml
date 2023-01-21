@@ -243,6 +243,15 @@ jobs:
           fb-upload.tar.gz
           build/*
 
+    - name: Release GUI
+      uses: softprops/action-gh-release@v0.1.14
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
+      with:
+        tag_name: RPG${{ steps.release_version.outputs.release_version }}
+        files: |
+          build/gui/*
+
     #- name: Generate index files for storage over github
     #  run: node index_generator.js build
     #- name: Deploy to storage
