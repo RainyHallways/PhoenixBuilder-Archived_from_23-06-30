@@ -1,7 +1,7 @@
 [
     {
         "名称": "记录方块改动日志",
-        "描述": "收集机器人周边的方块改动记录，并统计制成日志; 保存的日志使用 brotli 压缩，且使用的是默认压缩等级",
+        "描述": "收集机器人周边的方块改动记录，并统计制成日志; 保存的日志使用 brotli 压缩，且使用的是默认压缩等级; 文件格式详见 https://github.com/LNSSPsd/PhoenixBuilder/blob/main/omega/third_party/Happy2018new/doc/记录方块改动日志%20-%20文件格式.md",
         "版本": "0.0.1",
         "配置": {
             "是否监听 packet.UpdateBlock(21号) 包": true,
