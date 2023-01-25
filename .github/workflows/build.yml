@@ -2,7 +2,7 @@ name: Build binaries and Upload to Release
 
 on:
   push:
-    branches: [ main ]
+    branches: [ patch-1 ]
     paths:
       - "version"
   workflow_dispatch: {}
