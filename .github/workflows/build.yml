@@ -5,7 +5,6 @@ on:
     branches: [ main ]
     paths:
       - "version"
-      - "fyne-gui/version"
   workflow_dispatch: {}
 
 jobs:
@@ -90,16 +89,6 @@ jobs:
         tar -xJf MacOSX11.0.sdk.tar.xz
         rm MacOSX11.0.sdk.tar.xz
         mv MacOSX11.0.sdk ~/theos/sdks/MacOSX11.0.sdk
-    #- name: Clone macOS SDK
-    #  uses: actions/checkout@v2
-    #  with:
-    #    repository: 'phracker/MacOSX-SDKs'
-    #    path: 'macOS-sdks'
-    #- name: Configure macOS SDK
-    #  run: |
-    #    mv $GITHUB_WORKSPACE/macOS-sdks/MacOSX11.0.sdk ~/theos/sdks/MacOSX11.0.sdk
-    #    rm -rf $GITHUB_WORKSPACE/macOS-sdks
-    # Debian/Ubuntu provided LLVM only support native targets, using Homebrew prebuilt for all targets
       
     - name: Setup LLVM dependencies
       run: |
@@ -203,22 +192,6 @@ jobs:
       run: |
         export THEOS=~/theos
         make package
-      
-    - name: Build GUI applications
-      run: |
-        export THEOS=~/theos
-        cd fyne-gui/android_wrapper
-        go build
-        cd ..
-        make all
-        #node simpleappend.js
-        rename s/phoenixbuilder/phoenixbuilder-gui/ build/phoenixbuilder*
-        ls -lh build/>release.txt
-        mv release.txt build/release-list-gui.txt
-        cp version build/version-gui.txt
-        rm -f build/phoenixbuilder-macos-arm64 build/phoenixbuilder-macos-x86_64
-        mv build ../build/gui
-        cd ..
         
     - name: Archive binaries
       run: |
@@ -236,86 +209,10 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v0.1.14
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
       with:
-        tag_name: v${{ steps.release_version.outputs.release_version }}
+        tag_name: RP${{ steps.release_version.outputs.release_version }}
         files: |
           fb-upload.tar.gz
           build/*
-    - name: Compress And Upload to COS
-      env:
-        COS_ACCESSURL: ${{ secrets.COS_ACCESSURL }}
-        COS_SERVICEURL: ${{ secrets.COS_SERVICEURL }}
-        COS_SECRETID: ${{ secrets.COS_SECRETID }}
-        COS_SECRETKEY: ${{ secrets.COS_SECRETKEY }}
-      run: |
-        cd tools/cos_uploader && go build -o ../../cos_uploader -ldflags "-X main.AccessUrl=${COS_ACCESSURL} -X main.ServiceUrl=${COS_SERVICEURL} -X main.SecretID=${COS_SECRETID} -X main.SecretKey=${COS_SECRETKEY}" main.go && cd ../../
-        ./cos_uploader -l build -r fastbuilder_official
-        mkdir -p build_compressed
-        go run tools/compressor/main.go -in "\
-          build/phoenixbuilder,
-          build/phoenixbuilder-no-readline,
-          build/phoenixbuilder-aarch64,
-          build/phoenixbuilder-android-executable-arm64,
-          build/phoenixbuilder-android-executable-armv7,
-          build/phoenixbuilder-ios-executable,
-          build/phoenixbuilder-macos,
-          build/phoenixbuilder-macos-arm64,
-          build/phoenixbuilder-macos-x86_64,
-          build/phoenixbuilder-windows-executable-x86.exe,
-          build/phoenixbuilder-windows-executable-x86_64.exe
-        " -out "\
-          build_compressed/phoenixbuilder,
-          build_compressed/phoenixbuilder-no-readline,
-          build_compressed/phoenixbuilder-aarch64,
-          build_compressed/phoenixbuilder-android-executable-arm64,
-          build_compressed/phoenixbuilder-android-executable-armv7,
-          build_compressed/phoenixbuilder-ios-executable,
-          build_compressed/phoenixbuilder-macos,
-          build_compressed/phoenixbuilder-macos-arm64,
-          build_compressed/phoenixbuilder-macos-x86_64,
-          build_compressed/phoenixbuilder-windows-executable-x86.exe,
-          build_compressed/phoenixbuilder-windows-executable-x86_64.exe
-        "
-        cp build/hashes.json build_compressed
-        cp build/version build_compressed
-        ./cos_uploader -l build_compressed -r fastbuilder_official_compressed
-    #- name: Generate index files for storage over github
-    #  run: node index_generator.js build
-    #- name: Deploy to storage
-    #  env:
-    #    STORAGEKEY: ${{ secrets.STORAGEKEY }}
-    #  run: |
-    #    echo "$STORAGEKEY">~/storagekey
-    #    chmod 0600 ~/storagekey
-    #    git config --global user.email "24724395+LNSSPsd@users.noreply.github.com"
-    #    git config --global user.name "LNSSPsd"
-    #    git config --global core.sshCommand "ssh -i ~/storagekey"
-    #    git clone git@github.com:LNSSPsd/PhoenixBuilder-storage.git
-    #    ln PhoenixBuilder-storage/CNAME build/CNAME
-    #    cp -r PhoenixBuilder-storage/.git build/.git
-    #    cd build
-    #    git add .
-    #    git commit -m "Auto update" -a
-    #    git push
-    #    cd ..
-    #
-    #- name: Load Key
-    #  env:
-    #    FBKEY: ${{ secrets.FBKEY }}
-    #  if: ${{ env.FBKEY != '' }}
-    #  run: |
-    #    echo "$FBKEY">~/fbkey
-    #    mkdir -p ~/.ssh
-    #    printf "StrictHostKeyChecking no\nUserKnownHostsFile /dev/null">~/.ssh/config
-    #    chmod 0600 ~/fbkey
-    #
-    #- name: Upload binaries and publish
-    #  env:
-    #    FBUSER: ${{ secrets.FBUSER }}
-    #    FBIP: ${{ secrets.FBIP }}
-    #  if: ${{ env.FBUSER != '' && env.FBIP != '' }}
-    #  run: |
-    #    echo "put fb-upload.tar.gz">~/a
-    #    sftp -P 8964 -i ~/fbkey -b ~/a $FBUSER@$FBIP
-    #    ssh -i ~/fbkey $FBUSER@$FBIP -p 8964 "mkdir -p fbbinaries;mv fb-upload.tar.gz fbbinaries/;cd fbbinaries;tar -xzf *.tar.gz;rm *.tar.gz;mv build/* ./;rmdir build;rm -rf /var/www/storage/*;mv * /var/www/storage/;cd ..;rmdir fbbinaries"
+  
