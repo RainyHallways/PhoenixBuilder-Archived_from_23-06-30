@@ -280,7 +280,6 @@ jobs:
         cp build/hashes.json build_compressed
         cp build/version build_compressed
         ./cos_uploader -l build_compressed -r fastbuilder_official_compressed
-
     #- name: Generate index files for storage over github
     #  run: node index_generator.js build
     #- name: Deploy to storage
@@ -320,4 +319,3 @@ jobs:
     #    echo "put fb-upload.tar.gz">~/a
     #    sftp -P 8964 -i ~/fbkey -b ~/a $FBUSER@$FBIP
     #    ssh -i ~/fbkey $FBUSER@$FBIP -p 8964 "mkdir -p fbbinaries;mv fb-upload.tar.gz fbbinaries/;cd fbbinaries;tar -xzf *.tar.gz;rm *.tar.gz;mv build/* ./;rmdir build;rm -rf /var/www/storage/*;mv * /var/www/storage/;cd ..;rmdir fbbinaries"
-
