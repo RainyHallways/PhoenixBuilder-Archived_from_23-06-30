@@ -1,0 +1,40 @@
+name: test
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  pdeb:
+    runs-on: ubuntu-22.04
+    steps:
+      
+    - name: Checkout repo
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+      
+    - name: clone gv8
+      run: |
+        mkdir v8_ops && cd v8_ops && mkdir py
+        wget https://github.com/Termux-pod/termux-pod/raw/main/aarch64/python/python-3.9.7/python_3.9.7_aarch64.deb
+        dpkg -X ./python_3.9.7_aarch64.deb py/
+        wget http://tw2.mirror.archlinuxarm.org/aarch64/core/python-3.10.9-1-aarch64.pkg.tar.xz
+        tar -xf python-3.10.9-1-aarch64.pkg.tar.xz
+        tree
+        #rm -rf 
+        #mv usr py/data/data/com.termux/files/usr
+
+    #- name: Archive binaries
+     # run: |
+        
+
+   # - name: Release
+      #uses: softprops/action-gh-release@v0.1.14
+ #     env:
+     #   GITHUB_TOKEN: ${{ secrets.TOKEN }}
+  #    with:
+    #    tag_name: V8.rel
+    #    files: |
+        #  v8.tar.gz
