@@ -383,7 +383,6 @@ func (o *SeverToServerChatRoom) Inject(frame defines.MainFrame) {
 			val, ok := _v.(string)
 			if ok {
 				ScbUpdateTriggers = append(ScbUpdateTriggers, val)
-				fmt.Println("DEBUG: ", ScbUpdateTriggers)
 			} else {
 				panic(fmt.Sprintf("解析关键词出现问题"))
 			}
@@ -405,8 +404,8 @@ func (o *SeverToServerChatRoom) Inject(frame defines.MainFrame) {
 		o.Frame.GetGameListener().SetGameMenuEntry(&defines.GameMenuEntry{
 			MenuEntry: defines.MenuEntry{
 				Triggers:     ScbUpdateTriggers,
-				ArgumentHint: "[分数]",
-				Usage:        "跨服上传和提取分数",
+				ArgumentHint: "[计分板名] [分数]",
+				Usage:        "跨服上传和提取计分板分数",
 				FinalTrigger: false,
 			},
 			OptionalOnTriggerFn: o.uploadScore,
