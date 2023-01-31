@@ -123,10 +123,14 @@ def plugin_main(api:API):
             return render_template('playerlist.html',token=token,playerlist=player,人数1=人数1,op=oplist,人数2=人数2)
         @app.route("/omega/recording")
         def recording():
-            classes_path = os.path.expanduser('./omega_python_plugins/OmgSide插件-网页管理系统DATA/'+datetime.datetime.now().strftime('%Y-%m-%d')+".log")
-            with open(classes_path,'r',encoding = 'gbk') as f:
-                recording = f.readlines()
-            recording = [c.strip() for c in recording]
+            try:
+                classes_path = os.path.expanduser('./omega_python_plugins/OmgSide插件-网页管理系统DATA/'+datetime.datetime.now().strftime('%Y-%m-%d')+".log")
+                with open(classes_path,'r',encoding = 'gbk') as f:
+                    recording = f.readlines()
+                recording = [c.strip() for c in recording]
+            except:
+                pass
+                recording = []
             return render_template('recording.html',token=token,recording=recording)
         app.run(host='127.0.0.1',port=5000,debug=True,use_reloader=False)
     plugin_web()
