@@ -103,9 +103,9 @@ def plugin_main(api:API):
             </script>
         </body>
             '''
-        @app.route("/omega/api/commandstart/<command>/<token>")
-        def commandstart(command,token):
-            if token == token:
+        @app.route("/omega/api/commandstart/<command>/<tk>")
+        def commandstart(command,tk):
+            if token == tk:
                 response=api.do_send_ws_cmd(command,cb=None)
                 return response
         @app.route("/omega/playerlist")
