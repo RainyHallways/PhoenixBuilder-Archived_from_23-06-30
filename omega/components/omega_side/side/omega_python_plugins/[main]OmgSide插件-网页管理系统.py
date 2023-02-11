@@ -105,12 +105,9 @@ def plugin_main(api:API):
             '''
         @app.route("/omega/api/commandstart/<command>/<tk>")
         def commandstart(command,tk):
-            try:
-                if token == tk:
-                    response=api.do_send_ws_cmd(command,cb=None)
-                    return response
-            except:
-                return "权限不足"
+            if token == tk:
+                response=api.do_send_ws_cmd(command,cb=None)
+                return response
         @app.route("/omega/playerlist")
         def playerlist():
             playerlist = playerlist_get()
