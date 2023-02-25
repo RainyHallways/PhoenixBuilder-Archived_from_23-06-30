@@ -31,7 +31,7 @@ func (g *GlobalAPI) SendWSCommandWithResponce(command string) (packet.CommandOut
 		if success {
 			val, normal := got.(packet.CommandOutput)
 			if !normal {
-				return packet.CommandOutput{}, fmt.Errorf("SendWSCommandWithResponce: Responce is not a packet.CommandOutput struct")
+				return packet.CommandOutput{}, fmt.Errorf("SendWSCommandWithResponce: Responce %#v is not a packet.CommandOutput struct", got)
 			}
 			return val, nil
 		}
