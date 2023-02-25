@@ -347,34 +347,10 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 
 		switch p := pk.(type) {
 		case *packet.CommandOutput:
-
-			blockNBT_API.CommandRequestWaitingList.Lock.RLock()
-			length := len(blockNBT_API.CommandRequestWaitingList.List)
-			blockNBT_API.CommandRequestWaitingList.Lock.RUnlock()
-
-			if length > 0 {
-
-				blockNBT_API.CommandRequestWaitingList.Lock.RLock()
-				_, ok := blockNBT_API.CommandRequestWaitingList.List[p.CommandOrigin.UUID.String()]
-				blockNBT_API.CommandRequestWaitingList.Lock.RUnlock()
-
-				if ok {
-
-					blockNBT_API.CommandOutputPool.Lock.Lock()
-					blockNBT_API.CommandOutputPool.Pool[p.CommandOrigin.UUID.String()] = *p
-					blockNBT_API.CommandOutputPool.Lock.Unlock()
-
-					newMap := map[string]bool{}
-
-					blockNBT_API.CommandRequestWaitingList.Lock.Lock()
-					delete(blockNBT_API.CommandRequestWaitingList.List, p.CommandOrigin.UUID.String())
-					for key, value := range blockNBT_API.CommandRequestWaitingList.List {
-						newMap[key] = value
-					}
-					blockNBT_API.CommandRequestWaitingList.List = newMap
-					blockNBT_API.CommandRequestWaitingList.Lock.Unlock()
-
-				}
+			uniqueIdString := p.CommandOrigin.UUID.String()
+			_, success := blockNBT_API.CommandRequest.LoadAndDelete(uniqueIdString)
+			if success {
+				blockNBT_API.CommandResponce.Store(uniqueIdString, *p)
 			}
 		}
 		// for blockNBT

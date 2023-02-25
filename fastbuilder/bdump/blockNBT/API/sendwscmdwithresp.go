@@ -19,9 +19,7 @@ func (g *GlobalAPI) SendWSCommandWithResponce(command string) (packet.CommandOut
 	}
 	uniqueIdString := uniqueId.String()
 	// 初始化
-	CommandRequestWaitingList.Lock.Lock()
-	CommandRequestWaitingList.List[uniqueIdString] = true
-	CommandRequestWaitingList.Lock.Unlock()
+	CommandRequest.Store(uniqueIdString, uint8(0))
 	// 写入请求到等待队列
 	err = g.SendWSCommand(command, uniqueId)
 	if err != nil {
@@ -29,31 +27,13 @@ func (g *GlobalAPI) SendWSCommandWithResponce(command string) (packet.CommandOut
 	}
 	// 发送命令
 	for {
-
-		CommandRequestWaitingList.Lock.RLock()
-		_, unsuccess := CommandRequestWaitingList.List[uniqueIdString]
-		CommandRequestWaitingList.Lock.RUnlock()
-
-		if !unsuccess {
-
-			CommandOutputPool.Lock.RLock()
-			got, normal := CommandOutputPool.Pool[uniqueIdString]
+		got, success := CommandResponce.LoadAndDelete(uniqueIdString)
+		if success {
+			val, normal := got.(packet.CommandOutput)
 			if !normal {
-				return packet.CommandOutput{}, fmt.Errorf("SendWSCommandWithResponce: Responce not found(THIS IS A BUG)")
+				return packet.CommandOutput{}, fmt.Errorf("SendWSCommandWithResponce: Responce is not a packet.CommandOutput struct")
 			}
-			CommandOutputPool.Lock.RUnlock()
-
-			newMap := map[string]packet.CommandOutput{}
-
-			CommandOutputPool.Lock.Lock()
-			delete(CommandOutputPool.Pool, uniqueIdString)
-			for key, value := range CommandOutputPool.Pool {
-				newMap[key] = value
-			}
-			CommandOutputPool.Pool = newMap
-			CommandOutputPool.Lock.Unlock()
-
-			return got, nil
+			return val, nil
 		}
 	}
 }
