@@ -324,7 +324,6 @@ func CreateTask(commandLine string, env *environment.PBEnvironment) *Task {
 						},
 					},
 				}
-				env.Connection.(*minecraft.Conn).GameData()
 				err := newStruct.PlaceCommandBlockWithLegacyMethod(curblock, cfg)
 				if err != nil {
 					pterm.Warning.Printf("%v\n", err)

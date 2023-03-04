@@ -336,10 +336,6 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 	chunkAssembler.CreateRequestScheduler(func(pk *packet.SubChunkRequest) {
 		conn.WritePacket(pk)
 	})
-	go func() {
-		time.Sleep(time.Second * 5)
-		fmt.Println(env.Connection.(*minecraft.Conn).IdentityData().DisplayName)
-	}()
 	// currentChunkConstructor := &world_provider.ChunkConstructor{}
 	for {
 		if breaker != nil {
