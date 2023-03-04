@@ -47,6 +47,7 @@ var PassFatal bool = false
 func create_environment() *environment.PBEnvironment {
 	env := &environment.PBEnvironment{}
 	env.UQHolder = nil
+	env.UQHolderNew = nil
 	env.ActivateTaskStatus = make(chan bool)
 	env.TaskHolder = fbtask.NewTaskHolder()
 	functionHolder := function.NewFunctionHolder(env)
@@ -196,6 +197,10 @@ func InitClient(env *environment.PBEnvironment) {
 	env.UQHolder.(*uqHolder.UQHolder).UpdateFromConn(conn)
 	env.UQHolder.(*uqHolder.UQHolder).CurrentTick = 0
 
+	env.UQHolderNew = &blockNBT_API.PacketHandleResult{}
+	env.UQHolderNew.(*blockNBT_API.PacketHandleResult).InitValue()
+	// for blockNBT
+
 	if args.ShouldEnableOmegaSystem() {
 		_, cb := embed.EnableOmegaSystem(env)
 		go cb()
@@ -331,6 +336,10 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 	chunkAssembler.CreateRequestScheduler(func(pk *packet.SubChunkRequest) {
 		conn.WritePacket(pk)
 	})
+	go func() {
+		time.Sleep(time.Second * 5)
+		fmt.Println(env.Connection.(*minecraft.Conn).IdentityData().DisplayName)
+	}()
 	// currentChunkConstructor := &world_provider.ChunkConstructor{}
 	for {
 		if breaker != nil {
@@ -345,15 +354,7 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 			panic(err)
 		}
 
-		switch p := pk.(type) {
-		case *packet.CommandOutput:
-			uniqueIdString := p.CommandOrigin.UUID.String()
-			_, success := blockNBT_API.CommandRequest.LoadAndDelete(uniqueIdString)
-			if success {
-				blockNBT_API.CommandResponce.Store(uniqueIdString, *p)
-			}
-		}
-		// for blockNBT
+		env.UQHolderNew.(*blockNBT_API.PacketHandleResult).HandlePacket(&pk) // for blockNBT
 
 		if env.OmegaAdaptorHolder != nil {
 			env.OmegaAdaptorHolder.(*embed.EmbeddedAdaptor).FeedPacketAndByte(pk, data)
