@@ -1,9 +1,5 @@
 package I18n
 
-// Option isn't added to the main dictionary
-// as some invalid translations present
-// e.g. DelayThreshold_OnlyDiscrete, missing constant string "discrete"
-
 var I18nDict_ru_RU map[uint16]string = map[uint16]string{
 	ACME_FailedToGetCommand:             "Не удалось прочитать команду ACME",
 	ACME_FailedToSeek:                   "Недопустимый файл ACME, поскольку операция поиска завершилась неудачей.",
