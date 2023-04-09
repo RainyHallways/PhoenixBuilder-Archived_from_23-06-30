@@ -198,8 +198,8 @@ printf "\033[32mAll basic checks complete! Proceeding the installation...\033[0m
 
 # FastBuilder Presets
 # You should not change these contents
-FB_DOMAIN="https://storage.fastbuilder.pro/"
-FB_LOCATION_ROOT=""
+FB_DOMAIN="https://raw.fastbbs.top/PhoenixBuilder-${FB_BR}/"
+FB_LOCATION_ROOT="Release/${FB_VER}/"
 FB_PREFIX="phoenixbuilder"
 FB_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}${FB_PREFIX}"
 FB_VER=""
