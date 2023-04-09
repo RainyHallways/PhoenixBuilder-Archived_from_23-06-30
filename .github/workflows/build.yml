@@ -2,7 +2,7 @@ name: Build binaries and Upload to Release
 
 on:
   push:
-    branches: [ main ]
+    branches: [ Canary ]
     paths:
       - "version"
   workflow_dispatch: {}
@@ -89,6 +89,7 @@ jobs:
         mv release.txt build/release-list.txt
         cp version build/version.txt
         cp install.sh build/install.sh
+        tar -czf fb-upload.tar.gz build
     - name: Provide release version
       id: release_version
       run: echo "release_version=$(cat build/version)"  >> $GITHUB_OUTPUT
@@ -99,4 +100,5 @@ jobs:
       with:
         tag_name: Canary${{ steps.release_version.outputs.release_version }}
         files: |
+          fb-upload.tar.gz
           build/*
