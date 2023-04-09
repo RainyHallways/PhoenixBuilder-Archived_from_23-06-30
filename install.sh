@@ -199,11 +199,10 @@ printf "\033[32mAll basic checks complete! Proceeding the installation...\033[0m
 # FastBuilder Presets
 # You should not change these contents
 FB_DOMAIN="https://raw.fastbbs.top/PhoenixBuilder-${FB_BR}/"
-FB_LOCATION_ROOT="Release/${FB_VER}/"
+FB_LOCATION_ROOT="Release/${FB_BR}${FB_VER}/"
 FB_PREFIX="phoenixbuilder"
 FB_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}${FB_PREFIX}"
 FB_VER=""
-
 # Github Releases download source presets
 # Do not use mirror as default, let users choose their own
 # The environment variables here are the default and can be overridden by the environment variables set by the export command
@@ -289,6 +288,7 @@ report_error() {
   if [ ${DL_TOOL_NAME} == "curl" ]; then
     if [ ${1} == 22 ]; then
       printf "\033[031Download failure! Requested resources not exist! (curl: 22)\033[0m\n"
+      printf "\033[031请检查此分支内是否包括此版本！\033[0m\n"
       printf "\033[031 ${FB_LINK}\033[0m\n"
     elif [ ${1} == 3 ]; then
       printf "\033[031URL malformed. (curl: 3)\033[0m\n"
@@ -425,3 +425,4 @@ fi
 # Yay, everything done!
 printf "\033[32mFastBuilder has been successfully installed on your device!\nUse command \"%s\" to launch it.\033[0m\n" "${LAUNCH_CMD}"
 quit_installer 0
+
