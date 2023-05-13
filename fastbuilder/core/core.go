@@ -166,7 +166,7 @@ func InitClient(env *environment.PBEnvironment) {
 				env.LoginInfo.Token,
 			),
 			// EnableClientCache: true,
-		pterm.Println(I18n.T(I18n.ConnectionEstablished))
+			pterm.Println(I18n.T(I18n.ConnectionEstablished))
 		}
 		cconn, err := dialer.Dial("raknet")
 
