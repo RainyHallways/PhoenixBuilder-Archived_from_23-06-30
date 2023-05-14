@@ -176,6 +176,8 @@ func InitClient(env *environment.PBEnvironment) {
 				_, _ = bufio.NewReader(os.Stdin).ReadString('\n')
 			}
 			panic(err)
+		} else {
+		pterm.Println(I18n.T(I18n.ConnectionEstablished))
 		}
 		conn = cconn
 		if len(env.RespondUser) == 0 {
