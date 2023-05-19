@@ -1,6 +1,9 @@
 from collections import defaultdict
 from posixpath import split
 from threading import Event
+from typing import Literal, TextIO
+import sys
+from re import findall
 from typing import *
 import time
 import os
@@ -10,19 +13,56 @@ from omega_side.python3_omega_sync.protocol import CmdResult, PlayerInfo
 from ..python3_omega_sync import API
 from ..python3_omega_sync import frame as omega
 from ..python3_omega_sync import bootstrap
-
 orig_print=print
 def alter_print(*args,**kwargs):
     kwargs["flush"]=True
     orig_print(*args,**kwargs)
-print=orig_print
-
-def color(text: str, output: bool = True, end: str = "\n", replace: bool = False, replaceByNext: bool = False,*args,**kwargs) -> str:
-    # 所有在omega 环境下print 出来的东西会自动变颜色，且会自动转为日志，所以这两个函数并没有什么意义
+# 更新了为 DotCS 最新版本的函数
+def color(*values, output: bool = True, end: str = '\n', replace: bool = False, replaceByNext: bool = False, info: str | bool = " 信息 ", sep=' ', file: TextIO = sys.stdout, flush=True, word_wrapping: bool = True, text: str = None, is_time: bool = True, end_not_replace: bool = False, no_color: int = 0, title_time: str = "[%H:%M:%S] ", color_mode: int = 0, **date) -> None | str:
+    """
+    此函数对于 omega 来说没有任何意义,omega已经给你转换过了,我再写干啥。
+    这里只进行多行处理
+    """
+    if text:
+        return color(text, output=output, end=end, replace=replace, replaceByNext=replaceByNext, info=info, sep=sep, file=file, flush=flush, word_wrapping=word_wrapping, text=None, **date)
+    if replaceByNext:
+        replace = True
+    _values = []
+    if replace:
+        _values.append("\n")
+        end = ""
+    next_print_first = ""
+    for i in values:
+        i = str(i)
+        if word_wrapping:
+            # 特殊处理
+            if "\n" in i:
+                all = i.split("\n")
+                __values = []
+                for f in all:
+                    f = str(f)
+                    ret = findall('§[a-fr0-9]', f)
+                    if len(ret) != 0:next_print_first = ret[-1]
+                    __values.append("".join([next_print_first, f, "\033[0m"]))
+                _values.append("".join(__values))
+            else:
+                _values.append(i+"\033[0m")
+        else:
+            _values.append(i+"\033[0m")
+    if end_not_replace:
+        _values[-1] = _values[-1].rstrip("\033[0m")
     if output:
-        print(("\r" if replace else "")+ text,end="" if replaceByNext else "\n")
-    return text
-
+        if word_wrapping:
+            all = len(__values)
+            for v,i in enumerate(__values):
+                if all!=v-1:
+                    print(i, sep=sep, end="\n", file=file, flush=flush)
+                else:
+                    print(i, sep=sep, end=end, file=file, flush=flush)
+            pass
+        else:
+            print(*_values, sep=sep, end=end, file=file, flush=flush)
+print = color
 def log(text: str, filename: str = None, mode: str = "a", encoding: str = "utf-8", errors: str = "ignore", output: bool = True, sendtogamewithRitBlk: bool = False, sendtogamewithERROR: bool = False, sendtogrp: bool = False) -> None:
     print(text)
 
