@@ -3,7 +3,7 @@ package embed
 import (
 	"crypto/md5"
 	"fmt"
-	blockNBT_API "phoenixbuilder/fastbuilder/bdump/blockNBT/API"
+	"phoenixbuilder/ResourcesControlCenter"
 	"phoenixbuilder/fastbuilder/environment"
 	"phoenixbuilder/fastbuilder/function"
 	"phoenixbuilder/fastbuilder/uqHolder"
@@ -48,6 +48,10 @@ func (rc *EmbeddedAdaptor) GetInitUQHolderCopy() *uqHolder.UQHolder {
 		return nil
 	}
 	return newHolder
+}
+
+func (rc *EmbeddedAdaptor) GetGlobalResources() *ResourcesControlCenter.Resources {
+	return rc.env.Resources.(*ResourcesControlCenter.Resources)
 }
 
 func (rc *EmbeddedAdaptor) Write(pkt mc_packet.Packet) (err error) {
@@ -102,7 +106,6 @@ func EnableOmegaSystem(env *environment.PBEnvironment) (*EmbeddedAdaptor, func()
 	}
 
 	omega := mainframe.NewOmega()
-	omega.NewUQHolder = env.NewUQHolder.(*blockNBT_API.PacketHandleResult)
 	omega.Bootstrap(ea)
 	env.OmegaHolder = omega
 	env.OmegaAdaptorHolder = ea
