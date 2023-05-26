@@ -376,7 +376,7 @@ report_error() {
 printf "Getting latest version of FastBuilder...\n"
 FB_VERSION_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}/version"
 if [[ ${PB_USE_GH_REPO} == "1" ]]; then
-  FB_VERSION_LINK="${GH_DOMAIN}/${GH_USER}/${GH_REPO}/raw/main/version"
+  FB_VERSION_LINK=FB_VERSION_LINK=$(wget -qO- -t1 -T2 "https://api.github.com/repos/${GH_USER}/${GH_REPO}/releases/latest" | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')
 fi
 ${DL_TOOL} ${DL_TOOL_OUT_FLAG} "${PREFIX}"/./fastbuilder-temp/version ${FB_VERSION_LINK}
 DL_RET=$?
