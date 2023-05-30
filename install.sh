@@ -425,3 +425,4 @@ fi
 # Yay, everything done!
 printf "\033[32mFastBuilder has been successfully installed on your device!\nUse command \"%s\" to launch it.\033[0m\n" "${LAUNCH_CMD}"
 quit_installer 0
+

@@ -205,7 +205,7 @@ func InitClient(env *environment.PBEnvironment) {
 	if args.ShouldEnableOmegaSystem() {
 		_, cb := embed.EnableOmegaSystem(env)
 		go cb()
-		//cb()
+		//cb() 
 	}
 
 	commandSender := commands.InitCommandSender(env)

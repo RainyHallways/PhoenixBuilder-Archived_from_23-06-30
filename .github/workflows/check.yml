@@ -2,7 +2,7 @@ name: Check
 
 on:
   push:
-    branches: [ Mainfull ]
+    branches: [ Canary ]
 
 jobs:
   phoenixbuilder-check:
