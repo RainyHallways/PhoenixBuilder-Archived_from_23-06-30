@@ -421,7 +421,6 @@ func (o *Omega) Bootstrap(adaptor defines.ConnectionAdaptor) {
 	o.QuerySensitiveInfoFN = adaptor.QuerySensitiveInfo
 	o.adaptor = adaptor
 	o.uqHolder = adaptor.GetInitUQHolderCopy()
-	o.resources = adaptor.GetGlobalResources()
 	o.Reactor.scoreboardHolder = defines.NewScoreBoardHolder(o.uqHolder)
 	fmt.Println("开始空间回收任务: 日志压缩")
 	CompressLogs(o.storageRoot, 7, 3)
@@ -454,7 +453,7 @@ func (o *Omega) Bootstrap(adaptor defines.ConnectionAdaptor) {
 	o.checkAndLoadConfig()
 
 	o.backendLogger.Write("启用 Game Ctrl 模块")
-	o.GameCtrl = newGameCtrl(o)
+	o.GameCtrl = newGameCtrl(o, adaptor.GetInteraction())
 
 	o.backendLogger.Write("初始化 Context ...")
 	o.initContext()

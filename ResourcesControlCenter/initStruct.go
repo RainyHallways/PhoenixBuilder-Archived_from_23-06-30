@@ -83,17 +83,15 @@ func (r *Resources) Init() func(pk *packet.Packet) {
 		},
 		awaitChanges: sync.Mutex{},
 		resourcesOccupy: resourcesOccupy{
-			lockDown:   sync.Mutex{},
-			lockStates: 0,
-			holder:     "",
+			lockDown: sync.Mutex{},
+			holder:   "",
 		},
 	}
 	// Container
 	r.Structure = mcstructure{
 		resourcesOccupy: resourcesOccupy{
-			lockDown:   sync.Mutex{},
-			lockStates: 0,
-			holder:     "",
+			lockDown: sync.Mutex{},
+			holder:   "",
 		},
 		responce: struct {
 			lockDown sync.RWMutex

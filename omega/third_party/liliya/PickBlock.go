@@ -27,19 +27,7 @@ func (o *PickBlock) Init(cfg *defines.ComponentConfig, storage defines.StorageAn
 
 func (o *PickBlock) Inject(frame defines.MainFrame) {
 	o.Frame = frame
-	o.apis = GlobalAPI.GlobalAPI{
-		WritePacket: func(p packet.Packet) error {
-			o.Frame.GetGameControl().SendMCPacket(p)
-			return nil
-		},
-		BotInfo: GlobalAPI.BotInfo{
-			BotName:      o.Frame.GetUQHolder().GetBotName(),
-			BotIdentity:  "",
-			BotUniqueID:  o.Frame.GetUQHolder().BotUniqueID,
-			BotRunTimeID: o.Frame.GetUQHolder().BotRuntimeID,
-		},
-		Resources: o.Frame.GetResources(),
-	}
+	o.apis = o.Frame.GetGameControl().GetInteraction()
 	o.Frame.GetGameListener().SetGameMenuEntry(&defines.GameMenuEntry{
 		MenuEntry: defines.MenuEntry{
 			Triggers:     o.Triggers,

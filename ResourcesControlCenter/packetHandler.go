@@ -34,7 +34,9 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 		// inventory contents(for enchant command...)
 	case *packet.ItemStackResponse:
 		for _, value := range p.Responses {
-			r.ItemStackOperation.updateItemData(value, &r.Inventory)
+			if value.Status == protocol.ItemStackResponseStatusOK {
+				r.ItemStackOperation.updateItemData(value, &r.Inventory)
+			}
 			// update local inventory datas
 			err := r.ItemStackOperation.writeResponce(value.RequestID, value)
 			if err != nil {
@@ -44,8 +46,7 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 		}
 		// item stack request
 	case *packet.ContainerOpen:
-		unsuccess, _ := r.Container.Occupy(true)
-		if unsuccess {
+		if !r.Container.GetOccupyStates() {
 			panic("handlePacket: Attempt to send packet.ContainerOpen without using ResourcesControlCenter")
 		}
 		r.Container.writeContainerCloseDatas(nil)
@@ -69,7 +70,7 @@ func (r *Resources) handlePacket(pk *packet.Packet) {
 		// while a container is closed
 	case *packet.StructureTemplateDataResponse:
 		if r.Structure.GetOccupyStates() {
-			r.Structure.writeStructureResponce(*p)
+			r.Structure.writeStructureResponce(p)
 		}
 		// packet.StructureTemplateDataRequest
 	}

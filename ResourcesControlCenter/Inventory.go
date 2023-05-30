@@ -3,6 +3,7 @@ package ResourcesControlCenter
 import (
 	"fmt"
 	"phoenixbuilder/minecraft/protocol"
+	"sort"
 )
 
 // 列出所有可访问库存的窗口 ID ，即 WindowID
@@ -19,21 +20,47 @@ func (i *inventoryContents) ListWindowID() []uint32 {
 	// return
 }
 
-// 列出指定窗口 ID 所对应库存中的所有已记录槽位
-func (i *inventoryContents) ListSlot(windowID uint32) ([]uint8, error) {
+// 列出指定窗口 ID 所对应库存中的所有已记录槽位。
+//
+// filter 是一个可选的过滤器，在其生效时，
+// 将只返回满足条件的物品栏。
+// 假设苹果和空气的 ItemRunTimeId 分别为 233 和 0 ，
+// 则使用 []int32{233, 0} 作为过滤器时，将只会返回
+// 槽位中为苹果和空气的物品栏编号。
+//
+// 如果不希望使用过滤器，那么请在此参数处填写 nil
+func (i *inventoryContents) ListSlot(
+	windowID uint32,
+	filter *[]int32,
+) ([]uint8, error) {
 	i.lockDown.RLock()
 	defer i.lockDown.RUnlock()
-	// init
+	// lock down resources
+	newFilter := map[int32]interface{}{}
+	if filter != nil {
+		for _, value := range *filter {
+			newFilter[value] = true
+		}
+	}
+	// init map for filter
 	got, ok := i.datas[windowID]
 	if !ok {
 		return []uint8{}, fmt.Errorf("ListSlot: %v is not recorded in i.datas; i.datas = %#v", windowID, i.datas)
 	}
 	// if windowsID is not exist
-	ans := []uint8{}
-	for key := range got {
-		ans = append(ans, key)
+	tmp := []int{}
+	for key, value := range got {
+		if filter == nil || newFilter[value.Stack.ItemType.NetworkID] != nil {
+			tmp = append(tmp, int(key))
+		}
 	}
 	// get slots list
+	sort.Stable(sort.IntSlice(tmp))
+	// sort
+	ans := []byte{}
+	for _, value := range tmp {
+		ans = append(ans, byte(value))
+	}
 	return ans, nil
 	// return
 }

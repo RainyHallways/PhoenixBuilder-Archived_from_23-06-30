@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 )
 
+// ------------------------- Resources -------------------------
+
 /*
 管理 PhoenixBuilder 的各类公用资源。
 
@@ -30,6 +32,8 @@ type Resources struct {
 	Structure mcstructure
 }
 
+// ------------------------- commandRequestWithResponce -------------------------
+
 // 存放命令请求及结果
 type commandRequestWithResponce struct {
 	// 命令请求队列
@@ -50,6 +54,8 @@ type commandRequestWithResponce struct {
 	}
 }
 
+// ------------------------- inventoryContents -------------------------
+
 // 存放所有有效库存中的物品数据，例如背包和盔甲栏
 type inventoryContents struct {
 	// 防止并发读写而设置的读写锁
@@ -59,6 +65,8 @@ type inventoryContents struct {
 	// 最内层的 protocol.ItemInstance 存放物品数据
 	datas map[uint32]map[uint8]protocol.ItemInstance
 }
+
+// ------------------------- itemStackReuqestWithResponce -------------------------
 
 /*
 存放物品操作请求及结果。
@@ -101,6 +109,8 @@ type itemStackReuqestWithResponce struct {
 	*/
 	currentRequestID int32
 }
+
+// ------------------------- container -------------------------
 
 // 描述一个容器 ID
 type ContainerID uint8
@@ -165,6 +175,8 @@ type container struct {
 	resourcesOccupy
 }
 
+// ------------------------- mcstructure -------------------------
+
 // 记录结构资源并保存结构请求的回应
 type mcstructure struct {
 	// 描述结构资源的占用状态及占用者
@@ -179,3 +191,5 @@ type mcstructure struct {
 	// 其他实现在请求结构后可能需要等待回应，此互斥锁便是为了完成这一实现
 	awaitChanges sync.Mutex
 }
+
+// ------------------------- END -------------------------

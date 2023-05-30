@@ -22,12 +22,12 @@ func (m *mcstructure) AwaitResponceAfterSendPacket() {
 // 当且仅当租赁服响应客户端发送的结构请求后，此函数才会被调用。
 // 属于私有实现
 func (m *mcstructure) writeStructureResponce(
-	resp packet.StructureTemplateDataResponse,
+	resp *packet.StructureTemplateDataResponse,
 ) {
 	m.responce.lockDown.Lock()
 	defer m.responce.lockDown.Unlock()
 	// init
-	m.responce.datas = &resp
+	m.responce.datas = resp
 	// write datas
 	m.awaitChanges.TryLock()
 	m.awaitChanges.Unlock()

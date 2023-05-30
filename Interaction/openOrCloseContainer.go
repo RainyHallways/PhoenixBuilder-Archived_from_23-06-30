@@ -7,33 +7,51 @@ import (
 
 /*
 打开 pos 处名为 blockName 且方块状态为 blockStates 的容器，且只有当打开完成后才会返回值。
-slot 字段代表玩家此时手持的物品栏，因为打开容器实际上是一次方块点击事件。
+hotBarSlotID 字段代表玩家此时手持的物品栏，因为打开容器实际上是一次方块点击事件。
+返回值的第一项代表执行结果，为真时容器被成功打开，否则反之。
 
-当 needOccupyContainerResources 为真时，此函数会主动占用容器资源并在函数执行完成后释放。
-一般情况下我建议此参数填 false ，因为打开容器仅仅是一系列容器操作的一个步骤，
-因此此函数中不应该贸然修改容器资源，否则可能会造成潜在的问题。
-
-返回值的第一项代表执行结果，为真时容器被成功打开，否则反之
+请确保在使用此函数前占用了容器资源，否则会造成程序惊慌。
 */
 func (g *GlobalAPI) OpenContainer(
 	pos [3]int32,
 	blockName string,
 	blockStates map[string]interface{},
-	slot uint8,
-	needOccupyContainerResources bool,
+	hotBarSlotID uint8,
 ) (bool, error) {
-	if needOccupyContainerResources {
-		_, holder := g.Resources.Container.Occupy(false)
-		defer g.Resources.Container.Release(holder)
-	}
-	// lock down resources
 	g.Resources.Container.AwaitResponceBeforeSendPacket()
 	// await responce before send packet
-	err := g.UseItemOnBlocks(slot, pos, blockName, blockStates, false)
+	err := g.UseItemOnBlocks(hotBarSlotID, pos, blockName, blockStates, false)
 	if err != nil {
 		return false, fmt.Errorf("OpenContainer: %v", err)
 	}
 	// open container
+	g.Resources.Container.AwaitResponceAfterSendPacket()
+	// wait changes
+	if g.Resources.Container.GetContainerOpenDatas() == nil {
+		return false, nil
+	}
+	// if unsuccess
+	return true, nil
+	// return
+}
+
+/*
+打开背包。
+返回值的第一项代表执行结果，为真时背包被成功打开，否则反之。
+
+请确保打开前占用了容器资源，否则会造成程序惊慌。
+*/
+func (g *GlobalAPI) OpenInventory() (bool, error) {
+	g.Resources.Container.AwaitResponceBeforeSendPacket()
+	// await responce before send packet
+	err := g.WritePacket(&packet.Interact{
+		ActionType:            packet.InteractActionOpenInventory,
+		TargetEntityRuntimeID: g.BotInfo.BotRunTimeID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("OpenInventory: %v", err)
+	}
+	// open inventory
 	g.Resources.Container.AwaitResponceAfterSendPacket()
 	// wait changes
 	if g.Resources.Container.GetContainerOpenDatas() == nil {
