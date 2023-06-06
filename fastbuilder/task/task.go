@@ -2,11 +2,10 @@ package task
 
 import (
 	"fmt"
+	GlobalAPI "phoenixbuilder/Interaction"
+	"phoenixbuilder/ResourcesControlCenter"
+	"phoenixbuilder/blockNBT"
 	"phoenixbuilder/bridge/bridge_fmt"
-	"phoenixbuilder/fastbuilder/bdump/blockNBT"
-	blockNBT_API "phoenixbuilder/fastbuilder/bdump/blockNBT/API"
-	blockNBT_CommandBlock "phoenixbuilder/fastbuilder/bdump/blockNBT/CommandBlock"
-	blockNBT_global "phoenixbuilder/fastbuilder/bdump/blockNBT/Global"
 	"phoenixbuilder/fastbuilder/builder"
 	"phoenixbuilder/fastbuilder/commands_generator"
 	"phoenixbuilder/fastbuilder/configuration"
@@ -167,13 +166,15 @@ func CreateTask(commandLine string, env *environment.PBEnvironment) *Task {
 	fcfg := configuration.ConcatFullConfig(cfg, configuration.GlobalFullConfig(env).Delay())
 	dcfg := fcfg.Delay()
 
-	bdump_blockNBT_API := &blockNBT_API.GlobalAPI{
-		WritePacket:        env.Connection.(*minecraft.Conn).WritePacket,
-		BotName:            env.Connection.(*minecraft.Conn).IdentityData().DisplayName,
-		BotIdentity:        env.Connection.(*minecraft.Conn).IdentityData().Identity,
-		BotRunTimeID:       env.Connection.(*minecraft.Conn).GameData().EntityRuntimeID,
-		BotUniqueID:        env.Connection.(*minecraft.Conn).GameData().EntityUniqueID,
-		PacketHandleResult: env.NewUQHolder.(*blockNBT_API.PacketHandleResult),
+	bdump_blockNBT_API := &GlobalAPI.GlobalAPI{
+		WritePacket: env.Connection.(*minecraft.Conn).WritePacket,
+		BotInfo: GlobalAPI.BotInfo{
+			BotName:      env.Connection.(*minecraft.Conn).IdentityData().DisplayName,
+			BotIdentity:  env.Connection.(*minecraft.Conn).IdentityData().Identity,
+			BotRunTimeID: env.Connection.(*minecraft.Conn).GameData().EntityRuntimeID,
+			BotUniqueID:  env.Connection.(*minecraft.Conn).GameData().EntityUniqueID,
+		},
+		Resources: env.Resources.(*ResourcesControlCenter.Resources),
 	}
 
 	und, _ := uuid.NewUUID()
@@ -295,36 +296,37 @@ func CreateTask(commandLine string, env *environment.PBEnvironment) *Task {
 			}
 			blkscounter++
 			if curblock.NBTMap != nil {
-				err := blockNBT.PlaceBlockWithNBTDataRun(
+				err := blockNBT.PlaceBlockWithNBTData(
 					bdump_blockNBT_API,
 					curblock,
-					&blockNBT_global.Datas{
+					&blockNBT.Datas{
 						Settings: cfg,
 						FastMode: isFastMode,
 						Others:   nil,
 					},
 				)
 				if err != nil {
-					pterm.Warning.Printf("%v\n", err)
+					pterm.Warning.Printf("CreateTask: Failed to place the entity block named %v at (%d,%d,%d), and the error log is %v\n", curblock.Block.Name, curblock.Point.X, curblock.Point.Y, curblock.Point.Z, err)
 				}
 			} else if !cfg.ExcludeCommands && curblock.CommandBlockData != nil {
-				newStruct := blockNBT_CommandBlock.CommandBlock{
-					BlockEntityDatas: &blockNBT_global.BlockEntityDatas{
+				newStruct := blockNBT.CommandBlock{
+					Package: &blockNBT.Package{
 						API: bdump_blockNBT_API,
-						Datas: &blockNBT_global.Datas{
+						Datas: &blockNBT.Datas{
 							Position: [3]int32{int32(curblock.Point.X), int32(curblock.Point.Y), int32(curblock.Point.Z)},
 							Settings: cfg,
 							FastMode: isFastMode,
 							Others:   nil,
 						},
 					},
+					NeedToPlaceBlock: false,
 				}
 				err := newStruct.PlaceCommandBlockWithLegacyMethod(curblock, cfg)
 				if err != nil {
 					pterm.Warning.Printf("%v\n", err)
 				}
 			} else if curblock.ChestSlot != nil {
-				cmdsender.SendDimensionalCommand(commands_generator.ReplaceItemRequest(curblock, cfg))
+				cmdsender.SendDimensionalCommand(commands_generator.ReplaceItemRequest(curblock, ""))
 			} else {
 				err := cmdsender.SendDimensionalCommand(commands_generator.SetBlockRequest(curblock, cfg))
 				if err != nil {

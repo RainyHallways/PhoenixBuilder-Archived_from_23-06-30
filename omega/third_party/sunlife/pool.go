@@ -3,6 +3,7 @@ package sunlife
 import (
 	_ "embed"
 	"phoenixbuilder/omega/defines"
+	opl "phoenixbuilder/omega/third_party/sunlife/OPL"
 )
 
 // 插件所属组织或者作者名
@@ -23,4 +24,5 @@ var Components = map[string]defines.Component{
 	"自定义附魔升级系统":  &Enchant{BasicComponent: &defines.BasicComponent{}},
 	"无前缀简单自定义指令": &CustomCmd{BasicComponent: &defines.BasicComponent{}},
 	"王国系统":       &King{BasicComponent: &defines.BasicComponent{}},
+	"omg解释器":     &opl.OPL{BasicComponent: &defines.BasicComponent{}},
 }

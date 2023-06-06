@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
-	blockNBT_API "phoenixbuilder/fastbuilder/bdump/blockNBT/API"
+	"phoenixbuilder/ResourcesControlCenter"
 	"phoenixbuilder/fastbuilder/uqHolder"
 	"phoenixbuilder/minecraft/protocol/packet"
 	"phoenixbuilder/omega/defines"
@@ -29,9 +29,9 @@ type Omega struct {
 
 	storageRoot string
 
-	uqHolder    *uqHolder.UQHolder
-	NewUQHolder *blockNBT_API.PacketHandleResult // for blockNBT
-	ctx         map[string]interface{}
+	uqHolder  *uqHolder.UQHolder
+	resources *ResourcesControlCenter.Resources
+	ctx       map[string]interface{}
 
 	backendLogger    defines.LineDst
 	redAlertLogger   defines.LineDst
@@ -88,8 +88,8 @@ func (o *Omega) GetUQHolder() *uqHolder.UQHolder {
 	return o.uqHolder
 }
 
-func (o *Omega) GetNewUQHolder() *blockNBT_API.PacketHandleResult {
-	return o.NewUQHolder
+func (o *Omega) GetResources() *ResourcesControlCenter.Resources {
+	return o.resources
 }
 
 func (o *Omega) GetWorldsDir(elem ...string) string {

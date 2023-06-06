@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"phoenixbuilder/ResourcesControlCenter"
 	"phoenixbuilder/fastbuilder/args"
-	blockNBT_API "phoenixbuilder/fastbuilder/bdump/blockNBT/API"
 	"phoenixbuilder/fastbuilder/configuration"
 	fbauth "phoenixbuilder/fastbuilder/cv4/auth"
 	"phoenixbuilder/fastbuilder/environment"
@@ -49,7 +49,7 @@ var PassFatal bool = false
 func create_environment() *environment.PBEnvironment {
 	env := &environment.PBEnvironment{}
 	env.UQHolder = nil
-	env.NewUQHolder = nil
+	env.Resources = nil
 	env.ActivateTaskStatus = make(chan bool)
 	env.TaskHolder = fbtask.NewTaskHolder()
 	functionHolder := function.NewFunctionHolder(env)
@@ -178,6 +178,8 @@ func InitClient(env *environment.PBEnvironment) {
 				_, _ = bufio.NewReader(os.Stdin).ReadString('\n')
 			}
 			panic(err)
+		} else {
+			pterm.Println(I18n.T(I18n.ConnectionEstablished))
 		}
 		conn = cconn
 		if len(env.RespondUser) == 0 {
@@ -228,9 +230,8 @@ func InitClient(env *environment.PBEnvironment) {
 	env.UQHolder.(*uqHolder.UQHolder).UpdateFromConn(conn)
 	env.UQHolder.(*uqHolder.UQHolder).CurrentTick = 0
 
-	env.NewUQHolder = &blockNBT_API.PacketHandleResult{}
-	env.NewUQHolder.(*blockNBT_API.PacketHandleResult).InitValue()
-	// for blockNBT
+	env.Resources = &ResourcesControlCenter.Resources{}
+	env.ResourcesUpdater = env.Resources.(*ResourcesControlCenter.Resources).Init()
 
 	if args.ShouldEnableOmegaSystem() {
 		_, cb := embed.EnableOmegaSystem(env)
@@ -382,7 +383,7 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 			panic(err)
 		}
 
-		env.NewUQHolder.(*blockNBT_API.PacketHandleResult).HandlePacket(&pk) // for blockNBT
+		env.ResourcesUpdater.(func(pk *packet.Packet))(&pk)
 
 		{
 			p, ok := pk.(*packet.PyRpc)
