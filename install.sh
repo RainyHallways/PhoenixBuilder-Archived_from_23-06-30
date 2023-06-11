@@ -374,11 +374,10 @@ report_error() {
 
 # Download a file contains the latest version num for FastBuilder distros
 printf "Getting latest version of FastBuilder...\n"
-#FB_VERSION_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}/version"
+FB_VERSION_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}/version"
 if [[ ${PB_USE_GH_REPO} == "1" ]]; then
   FB_VERSION_LINK="https://api.github.com/repos/${GH_USER}/${GH_REPO}/releases/latest"
 fi
-FB_VERSION_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}/version"
 ${DL_TOOL} ${DL_TOOL_OUT_FLAG} "${PREFIX}"/./fastbuilder-temp/version ${FB_VERSION_LINK}
 DL_RET=$?
 if [ ${DL_RET} == 0 ]; then
