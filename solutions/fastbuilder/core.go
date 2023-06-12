@@ -192,6 +192,7 @@ func EnterWorkerThread(env *environment.PBEnvironment, breaker chan struct{}) {
 						}, []byte{}),
 					})
 					getchecknum_everPassed = true
+					pterm.Println(I18n.T(I18n.ConnectionEstablished))
 					/*go func() {
 						time.Sleep(3*time.Second)
 						ud, _ := uuid.NewUUID()
