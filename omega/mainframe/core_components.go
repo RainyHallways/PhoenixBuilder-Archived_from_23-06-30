@@ -9,6 +9,7 @@ import (
 	"phoenixbuilder/minecraft/protocol/packet"
 	"phoenixbuilder/omega/collaborate"
 	"phoenixbuilder/omega/defines"
+
 	"phoenixbuilder/omega/utils"
 
 	// "runtime/pprof"
@@ -572,6 +573,65 @@ func (o *Partol) Activate() {
 	}
 }
 
+// 插件
+type LuaComponenter struct {
+	*BaseCoreComponent
+	Monitor  *Monitor
+	LuaFrame *BuiltlnFn
+}
+
+func (b *LuaComponenter) Init(cfg *defines.ComponentConfig, storage defines.StorageAndLogProvider) {
+	m, _ := json.Marshal(cfg.Configs)
+	err := json.Unmarshal(m, b)
+	if err != nil {
+		panic(err)
+	}
+	//读取lua框架
+	b.Monitor = &Monitor{
+		ComponentPoll: make(map[string]*LuaComponent),
+	}
+	go b.Monitor.Start()
+
+}
+func (b *LuaComponenter) Inject(frame defines.MainFrame) {
+	b.mainFrame = frame
+	//注入frame等东西
+	/*
+		b.Frame.GetGameListener().SetOnTypedPacketCallBack(packet.IDAddItemActor, func(p packet.Packet) {
+			fmt.Print("凋落物的包:", p, "\n")
+		})
+	*/
+
+}
+
+func (o *LuaComponenter) Activate() {
+	go func() {
+		o.mainFrame.GetGameControl().SendCmd("/say test")
+		o.LuaFrame = &BuiltlnFn{
+			OmgFrame: o,
+		}
+		o.Monitor.LoadFn(*o.LuaFrame)
+		if err := o.Monitor.CmdCenter("lua start component test"); err != nil {
+			PrintInfo(NewPrintMsg("警告", err))
+		}
+
+		o.mainFrame.GetGameControl().SendCmdAndInvokeOnResponse("test", func(output *packet.CommandOutput) {
+			fmt.Println("test", output)
+		})
+	}()
+
+}
+
+// 启动交互器
+func (b *LuaComponenter) LuaFrameworkLauncher() {
+
+}
+
+// 启动go的交互器 与lua建立包的联系
+func (b *LuaComponenter) goFrameworkLauncher() {
+
+}
+
 func getCoreComponentsPool() map[string]func() defines.CoreComponent {
 	return map[string]func() defines.CoreComponent{
 		"菜单显示":      func() defines.CoreComponent { return &Menu{BaseCoreComponent: &BaseCoreComponent{}} },
@@ -582,5 +642,6 @@ func getCoreComponentsPool() map[string]func() defines.CoreComponent {
 		"性能分析":      func() defines.CoreComponent { return &PerformaceAnalysis{BaseCoreComponent: &BaseCoreComponent{}} },
 		"OP权限自检":    func() defines.CoreComponent { return &OPCheck{BaseCoreComponent: &BaseCoreComponent{}} },
 		"随机巡逻":      func() defines.CoreComponent { return &Partol{BaseCoreComponent: &BaseCoreComponent{}} },
+		"lua插件支持":   func() defines.CoreComponent { return &LuaComponenter{BaseCoreComponent: &BaseCoreComponent{}} },
 	}
 }
