@@ -548,6 +548,7 @@ func (o *Partol) Inject(frame defines.MainFrame) {
 }
 
 func (o *Partol) Activate() {
+	//o.mainFrame.GetGameControl().SendCmd("/say test=======")
 	if !o.EnablePartol {
 		return
 	}
@@ -595,29 +596,30 @@ func (b *LuaComponenter) Init(cfg *defines.ComponentConfig, storage defines.Stor
 }
 func (b *LuaComponenter) Inject(frame defines.MainFrame) {
 	b.mainFrame = frame
-	//注入frame等东西
-	/*
-		b.Frame.GetGameListener().SetOnTypedPacketCallBack(packet.IDAddItemActor, func(p packet.Packet) {
-			fmt.Print("凋落物的包:", p, "\n")
-		})
-	*/
-
+	b.omega.SetBackendCmdInterceptor(func(cmds []string) (stop bool) {
+		is := false
+		if cmds[0] == "lua" {
+			is = true
+		}
+		cmd := ""
+		for _, v := range cmds {
+			cmd += v + " "
+		}
+		if err := b.Monitor.CmdCenter(cmd); err != nil {
+			PrintInfo(NewPrintMsg("警告", err))
+		}
+		return is
+	})
 }
 
 func (o *LuaComponenter) Activate() {
 	go func() {
-		o.mainFrame.GetGameControl().SendCmd("/say test")
+
+		time.Sleep(3 * time.Second)
 		o.LuaFrame = &BuiltlnFn{
 			OmgFrame: o,
 		}
 		o.Monitor.LoadFn(*o.LuaFrame)
-		if err := o.Monitor.CmdCenter("lua start component test"); err != nil {
-			PrintInfo(NewPrintMsg("警告", err))
-		}
-
-		o.mainFrame.GetGameControl().SendCmdAndInvokeOnResponse("test", func(output *packet.CommandOutput) {
-			fmt.Println("test", output)
-		})
 	}()
 
 }
