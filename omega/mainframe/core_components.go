@@ -591,6 +591,11 @@ func (b *LuaComponenter) Init(cfg *defines.ComponentConfig, storage defines.Stor
 	b.Monitor = NewMonitor(b)
 	//读取一次已经产生的文件
 	b.Monitor.InintComponents()
+	i := 0
+	for k, _ := range b.Monitor.ComponentPath {
+		i++
+		b.omega.backendLogger.Write(pterm.Success.Sprintf("\tlua组件 %3d/%3d [%v] %v组件", i, len(b.Monitor.ComponentPath), LUASOURCE, k))
+	}
 }
 func (b *LuaComponenter) Inject(frame defines.MainFrame) {
 	b.mainFrame = frame
