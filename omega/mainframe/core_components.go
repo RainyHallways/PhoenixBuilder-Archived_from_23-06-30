@@ -588,52 +588,69 @@ func (b *LuaComponenter) Init(cfg *defines.ComponentConfig, storage defines.Stor
 		panic(err)
 	}
 	//读取lua框架
-	b.Monitor = &Monitor{
-		ComponentPoll: make(map[string]*LuaComponent),
-	}
-	go b.Monitor.Start()
-
+	b.Monitor = NewMonitor(b)
+	//读取一次已经产生的文件
+	b.Monitor.InintComponents()
 }
 func (b *LuaComponenter) Inject(frame defines.MainFrame) {
 	b.mainFrame = frame
-	b.omega.SetBackendCmdInterceptor(func(cmds []string) (stop bool) {
-		is := false
-		if cmds[0] == "lua" {
-			is = true
-		}
-		cmd := ""
-		for _, v := range cmds {
-			cmd += v + " "
-		}
-		if err := b.Monitor.CmdCenter(cmd); err != nil {
-			PrintInfo(NewPrintMsg("警告", err))
-		}
-		return is
-	})
+	//注入函数 并且开启插件
+	b.Monitor.InjectComponents()
+
 }
 
 func (o *LuaComponenter) Activate() {
-	go func() {
-
-		time.Sleep(3 * time.Second)
-		o.LuaFrame = &BuiltlnFn{
-			OmgFrame: o,
+	time.Sleep(time.Second * 3)
+	//开启组件
+	for k, _ := range o.Monitor.ComponentPoll {
+		err := o.Monitor.StartComponent(k, o.Monitor.ComponentPath[k].LuaFile)
+		if err != nil {
+			PrintInfo(NewPrintMsg("警告", err))
 		}
-		o.Monitor.LoadFn(*o.LuaFrame)
+	}
+	//现在开始监听后台
+	func() {
+		o.omega.SetBackendCmdInterceptor(func(cmds []string) (stop bool) {
+			is := false
+			if cmds[0] == "lua" {
+				is = true
+			}
+			cmd := ""
+			for _, v := range cmds {
+				cmd += v + " "
+			}
+			if err := o.Monitor.CmdCenter(cmd); err != nil {
+				PrintInfo(NewPrintMsg("警告", err))
+			}
+			return is
+		})
+		o.mainFrame.GetGameListener().SetGameChatInterceptor(o.MsgDistributionCenter)
 	}()
 
 }
 
-// 启动交互器
-func (b *LuaComponenter) LuaFrameworkLauncher() {
-
+// 每次消息传输过来则分发处理
+func (b *LuaComponenter) MsgDistributionCenter(chat *defines.GameChat) bool {
+	b.Monitor.BuiltlnFner.Listener.Range(func(key, value interface{}) bool { // 遍历所有监听器
+		msg := ""
+		for _, v := range chat.Msg {
+			msg += v + " "
+		}
+		message := Message{
+			Type:    chat.Name,
+			Content: msg,
+		}
+		listener := key.(*Listener) // 获取监听器实例
+		select {
+		case listener.msgChannel <- message: // 尝试将消息发送到监听器的消息通道
+		default: // 如果监听器的消息通道已满
+			<-listener.msgChannel          // 从通道中读取并丢弃一条最旧的消息
+			listener.msgChannel <- message // 将新消息发送到监听器的消息通道
+		}
+		return true
+	})
+	return false
 }
-
-// 启动go的交互器 与lua建立包的联系
-func (b *LuaComponenter) goFrameworkLauncher() {
-
-}
-
 func getCoreComponentsPool() map[string]func() defines.CoreComponent {
 	return map[string]func() defines.CoreComponent{
 		"菜单显示":      func() defines.CoreComponent { return &Menu{BaseCoreComponent: &BaseCoreComponent{}} },
