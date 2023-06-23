@@ -592,9 +592,14 @@ func (b *LuaComponenter) Init(cfg *defines.ComponentConfig, storage defines.Stor
 	//读取一次已经产生的文件
 	b.Monitor.InintComponents()
 	i := 0
-	for k, _ := range b.Monitor.ComponentPath {
+	for k, v := range b.Monitor.luaComponentData {
 		i++
-		b.omega.backendLogger.Write(pterm.Success.Sprintf("\tlua组件 %3d/%3d [%v] %v组件", i, len(b.Monitor.ComponentPath), LUASOURCE, k))
+		if v.jsonConfig.Disabled {
+			b.omega.backendLogger.Write(pterm.Warning.Sprintf("\t跳过加载组件 %3d/%3d [%v] %v@%v", i, len(b.Monitor.luaComponentData), v.jsonConfig.Source, k, v.jsonConfig.Version))
+		} else {
+			b.omega.backendLogger.Write(pterm.Success.Sprintf("\t正在加载组件 %3d/%3d [%v] %v@%v", i, len(b.Monitor.luaComponentData), v.jsonConfig.Source, k, v.jsonConfig.Version))
+		}
+
 	}
 }
 func (b *LuaComponenter) Inject(frame defines.MainFrame) {
@@ -608,7 +613,7 @@ func (o *LuaComponenter) Activate() {
 	time.Sleep(time.Second * 3)
 	//开启组件
 	for k, _ := range o.Monitor.ComponentPoll {
-		err := o.Monitor.StartComponent(k, o.Monitor.ComponentPath[k].LuaFile)
+		err := o.Monitor.StartComponent(k, o.Monitor.luaComponentData[k].LuaFile)
 		if err != nil {
 			PrintInfo(NewPrintMsg("警告", err))
 		}
