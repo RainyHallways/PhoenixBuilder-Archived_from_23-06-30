@@ -1,4 +1,4 @@
-package mainframe
+package luaFrame
 
 // 描述了一个lua插件配置该有的东西
 type LuaCommpoentConfig struct {

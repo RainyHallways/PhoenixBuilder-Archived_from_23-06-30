@@ -1,8 +1,10 @@
-package mainframe
+package luaFrame
 
 import (
 	"fmt"
 	"phoenixbuilder/minecraft/protocol/packet"
+	"phoenixbuilder/omega/defines"
+	omgApi "phoenixbuilder/omega/mainframe/lang_support/lua_frame/omgcomponentapi"
 	"sync"
 
 	lua "github.com/yuin/gopher-lua"
@@ -10,8 +12,10 @@ import (
 
 // 内置函数加载器
 type BuiltlnFn struct {
-	OmgFrame *LuaComponenter
-	Listener sync.Map
+	//omg组件
+	OmegaFrame *omgApi.OmgApi
+	Listener   sync.Map
+	mainframe  defines.MainFrame
 }
 
 // 写入
@@ -50,17 +54,17 @@ func (b *BuiltlnFn) GetListener(L *lua.LState) int {
 func (b *BuiltlnFn) GetControl(L *lua.LState) int {
 	GameControl := L.NewTable()
 	L.SetField(GameControl, "SendWsCmd", L.NewFunction(func(l *lua.LState) int {
-		if l.GetTop() == 1 {
-			args := L.CheckString(1)
-			b.OmgFrame.mainFrame.GetGameControl().SendCmd(args)
 
-		}
+		args := L.CheckString(1)
+		b.OmegaFrame.MainFrame.GetGameControl().SendCmd(args)
+
 		return 1
 	}))
 	L.SetField(GameControl, "SendCmdAndInvokeOnResponse", L.NewFunction(func(l *lua.LState) int {
 		if l.GetTop() == 1 {
 			args := L.CheckString(1)
-			b.OmgFrame.mainFrame.GetGameControl().SendCmdAndInvokeOnResponse(args, func(output *packet.CommandOutput) {
+			ch := make(chan bool)
+			b.OmegaFrame.MainFrame.GetGameControl().SendCmdAndInvokeOnResponse(args, func(output *packet.CommandOutput) {
 				cmdBack := L.NewTable()
 				if output.SuccessCount > 0 {
 					L.SetField(cmdBack, "Success", lua.LBool(true))
@@ -69,8 +73,9 @@ func (b *BuiltlnFn) GetControl(L *lua.LState) int {
 				}
 				L.SetField(cmdBack, "outputmsg", lua.LString(fmt.Sprintf("%v", output.OutputMessages)))
 				L.Push(cmdBack)
-
+				ch <- true
 			})
+			<-ch
 		}
 		return 1
 	}))
@@ -87,12 +92,12 @@ type Message struct {
 // 监听器
 // Listener 结构体
 type Listener struct {
-	msgChannel chan Message // 每个监听器都有一个独立的消息通道
+	MsgChannel chan Message // 每个监听器都有一个独立的消息通道
 }
 
 // GetListener 创建一个新的监听器并返回其引用
 func (f *BuiltlnFn) GetMsgListener(L *lua.LState) int {
-	listener := &Listener{msgChannel: make(chan Message, 25)} // 创建一个新监听器实例，并初始化其消息通道容量为25
+	listener := &Listener{MsgChannel: make(chan Message, 25)} // 创建一个新监听器实例，并初始化其消息通道容量为25
 	ptr := &f.Listener
 	ptr.Store(listener, struct{}{}) // 将新监听器添加到监听器集合中
 
@@ -109,7 +114,7 @@ func NextMsg(L *lua.LState) int {
 	ud := L.CheckUserData(1)         // 从Lua参数中获取UserData
 	listener := ud.Value.(*Listener) // 从UserData中提取监听器实例
 
-	msg := <-listener.msgChannel // 从监听器的消息通道中读取下一个消息，如果没有消息，则阻塞等待
+	msg := <-listener.MsgChannel // 从监听器的消息通道中读取下一个消息，如果没有消息，则阻塞等待
 	L.Push(lua.LString(msg.Type))
 	L.Push(lua.LString(msg.Content))
 	return 2

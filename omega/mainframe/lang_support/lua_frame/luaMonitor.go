@@ -1,9 +1,10 @@
-package mainframe
+package luaFrame
 
 import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	omgApi "phoenixbuilder/omega/mainframe/lang_support/lua_frame/omgcomponentapi"
 	"sync"
 
 	lua "github.com/yuin/gopher-lua"
@@ -28,8 +29,8 @@ type Monitor struct {
 	//区别点在于lua的优势导致 这个插件能够热重载以及能够修改其中的主要逻辑
 	ComponentPoll map[string]*LuaComponent
 	//omg框架
-	luaComponentData map[string]Result
-	OmgFrame         *LuaComponenter
+	LuaComponentData map[string]Result
+	OmgFrame         *omgApi.OmgApi
 	FileControl      *FileControl
 	BuiltlnFner      *BuiltlnFn
 }
@@ -45,14 +46,14 @@ type LuaComponent struct {
 	Config LuaCommpoentConfig
 }
 
-func NewMonitor(lc *LuaComponenter) *Monitor {
+func NewMonitor(lc *omgApi.OmgApi) *Monitor {
 	return &Monitor{
 		ComponentPoll: make(map[string]*LuaComponent),
 		//获取omg框架
 		OmgFrame: lc,
 		BuiltlnFner: &BuiltlnFn{
-			OmgFrame: lc,
-			Listener: sync.Map{},
+			OmegaFrame: lc,
+			Listener:   sync.Map{},
 		},
 		FileControl: &FileControl{},
 	}
@@ -65,7 +66,7 @@ func (m *Monitor) InintComponents() {
 	//获取路径
 	luaComponentData, err_first := m.FileControl.GetLuaComponentData()
 
-	m.luaComponentData = luaComponentData
+	m.LuaComponentData = luaComponentData
 	if err_first != nil {
 		PrintInfo(NewPrintMsg("警告", err_first))
 	}
@@ -74,12 +75,12 @@ func (m *Monitor) InintComponents() {
 
 // 单独加载某个插件
 func (m *Monitor) InjectComponent(name string) error {
-	if _v, ok := m.luaComponentData[name]; !ok {
+	if _v, ok := m.LuaComponentData[name]; !ok {
 		errors.New(fmt.Sprintf("你正在尝试运行组件:%v 但是它并未在配置文件之中找到 请确定它存在", name))
 	} else {
 		k := name
 		v := _v
-		_config := v.jsonConfig
+		_config := v.JsonConfig
 		//如果配置文件是开启
 		if !_config.Disabled {
 			L := lua.NewState()
@@ -104,10 +105,10 @@ func (m *Monitor) InjectComponent(name string) error {
 // 加载配置文件 创始pool池子
 func (m *Monitor) InjectComponents() error {
 	//开启配置文件为开启的 将决定开启的加入componentPool
-	for _k, _v := range m.luaComponentData {
+	for _k, _v := range m.LuaComponentData {
 		k := _k
 		v := _v
-		_config := v.jsonConfig
+		_config := v.JsonConfig
 		//如果配置文件是开启
 		if !_config.Disabled {
 			L := lua.NewState()
@@ -181,7 +182,7 @@ func (m *Monitor) Reload(cmdmsg *CmdMsg) error {
 			m.InjectComponents()
 			//开启组件
 			for k, _ := range m.ComponentPoll {
-				err := m.StartComponent(k, m.luaComponentData[k].LuaFile)
+				err := m.StartComponent(k, m.LuaComponentData[k].LuaFile)
 				if err != nil {
 					PrintInfo(NewPrintMsg("警告", err))
 				}
@@ -196,7 +197,7 @@ func (m *Monitor) Reload(cmdmsg *CmdMsg) error {
 			return err
 		}
 		//运行组件
-		if v, ok := m.luaComponentData[componentName]; !ok {
+		if v, ok := m.LuaComponentData[componentName]; !ok {
 			return errors.New(fmt.Sprintf("你正在尝试运行组件:%v 但是它并未在配置文件之中找到 请确定它存在", componentName))
 		} else {
 			if err := m.StartComponent(componentName, v.LuaFile); err != nil {
@@ -209,6 +210,9 @@ func (m *Monitor) Reload(cmdmsg *CmdMsg) error {
 			}*/
 		PrintInfo(NewPrintMsg("提示", fmt.Sprintf("%v已经重新加载", componentName)))
 		return nil
+	default:
+		PrintInfo(NewPrintMsg("警告", "无效指令"))
+
 	}
 	return nil
 }
@@ -254,12 +258,13 @@ func (m *Monitor) StartComponent(name string, luapath string) error {
 	}
 	//执行代码
 	go func(Name string, luaPath string) {
+		m.ComponentPoll[Name].Running = true
+		PrintInfo(NewPrintMsg("lua插件", fmt.Sprintf("%v插件启动成功 版本:%v", Name, m.ComponentPoll[Name].Config.Version)))
+
 		if err := m.ComponentPoll[Name].L.DoFile(luaPath); err != nil {
 			PrintInfo(NewPrintMsg("lua代码报错", err))
-		} else {
-			m.ComponentPoll[Name].Running = true
-			PrintInfo(NewPrintMsg("lua插件", fmt.Sprintf("%v插件启动成功 版本:%v", Name, m.ComponentPoll[Name].Config.Version)))
 		}
+
 	}(name, luapath)
 	return nil
 }
@@ -305,7 +310,7 @@ func (m *Monitor) luaCmdHandler(CmdMsg *CmdMsg) error {
 				componentUsage = args[1]
 			}*/
 		//检查当前是否有
-		if _, ok := m.luaComponentData[componentName]; ok {
+		if _, ok := m.LuaComponentData[componentName]; ok {
 			return errors.New(fmt.Sprintf("已经含有%v插件 无法创立", componentName))
 		}
 		//如果没有则创建文件

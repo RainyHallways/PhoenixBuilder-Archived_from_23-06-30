@@ -9,7 +9,8 @@ import (
 	"phoenixbuilder/minecraft/protocol/packet"
 	"phoenixbuilder/omega/collaborate"
 	"phoenixbuilder/omega/defines"
-
+	lf "phoenixbuilder/omega/mainframe/lang_support/lua_frame"
+	omgApi "phoenixbuilder/omega/mainframe/lang_support/lua_frame/omgcomponentapi"
 	"phoenixbuilder/omega/utils"
 
 	// "runtime/pprof"
@@ -577,8 +578,9 @@ func (o *Partol) Activate() {
 // 插件
 type LuaComponenter struct {
 	*BaseCoreComponent
-	Monitor  *Monitor
-	LuaFrame *BuiltlnFn
+	Monitor   *lf.Monitor
+	LuaFrame  *lf.BuiltlnFn
+	mainFrame defines.MainFrame
 }
 
 func (b *LuaComponenter) Init(cfg *defines.ComponentConfig, storage defines.StorageAndLogProvider) {
@@ -588,16 +590,19 @@ func (b *LuaComponenter) Init(cfg *defines.ComponentConfig, storage defines.Stor
 		panic(err)
 	}
 	//读取lua框架
-	b.Monitor = NewMonitor(b)
+	b.Monitor = lf.NewMonitor(omgApi.NewOmgCoreComponent(b.omega, b.mainFrame))
 	//读取一次已经产生的文件
 	b.Monitor.InintComponents()
 	i := 0
-	for k, v := range b.Monitor.luaComponentData {
+	for k, v := range b.Monitor.LuaComponentData {
 		i++
-		if v.jsonConfig.Disabled {
-			b.omega.backendLogger.Write(pterm.Warning.Sprintf("\t跳过加载组件 %3d/%3d [%v] %v@%v", i, len(b.Monitor.luaComponentData), v.jsonConfig.Source, k, v.jsonConfig.Version))
+		if v.JsonConfig.Disabled {
+
+			b.Monitor.OmgFrame.Omega.GetBackendDisplay().Write(pterm.Warning.Sprintf("\t跳过加载组件 %3d/%3d [%v] %v@%v", i, len(b.Monitor.LuaComponentData), v.JsonConfig.Source, k, v.JsonConfig.Version))
+			//b.omega.backendLogger.Write()
 		} else {
-			b.omega.backendLogger.Write(pterm.Success.Sprintf("\t正在加载组件 %3d/%3d [%v] %v@%v", i, len(b.Monitor.luaComponentData), v.jsonConfig.Source, k, v.jsonConfig.Version))
+			b.Monitor.OmgFrame.Omega.GetBackendDisplay().Write(pterm.Success.Sprintf("\t正在加载组件 %3d/%3d [%v] %v@%v", i, len(b.Monitor.LuaComponentData), v.JsonConfig.Source, k, v.JsonConfig.Version))
+			//b.omega.backendLogger.Write()
 		}
 
 	}
@@ -605,6 +610,7 @@ func (b *LuaComponenter) Init(cfg *defines.ComponentConfig, storage defines.Stor
 func (b *LuaComponenter) Inject(frame defines.MainFrame) {
 	b.mainFrame = frame
 	//注入函数 并且开启插件
+
 	b.Monitor.InjectComponents()
 
 }
@@ -612,15 +618,16 @@ func (b *LuaComponenter) Inject(frame defines.MainFrame) {
 func (o *LuaComponenter) Activate() {
 	time.Sleep(time.Second * 3)
 	//开启组件
+	o.Monitor.OmgFrame.MainFrame = o.mainFrame
 	for k, _ := range o.Monitor.ComponentPoll {
-		err := o.Monitor.StartComponent(k, o.Monitor.luaComponentData[k].LuaFile)
+		err := o.Monitor.StartComponent(k, o.Monitor.LuaComponentData[k].LuaFile)
 		if err != nil {
-			PrintInfo(NewPrintMsg("警告", err))
+			lf.PrintInfo(lf.NewPrintMsg("警告", err))
 		}
 	}
 	//现在开始监听后台
 	func() {
-		o.omega.SetBackendCmdInterceptor(func(cmds []string) (stop bool) {
+		o.Monitor.OmgFrame.Omega.SetBackendCmdInterceptor(func(cmds []string) (stop bool) {
 			is := false
 			if cmds[0] == "lua" {
 				is = true
@@ -630,10 +637,11 @@ func (o *LuaComponenter) Activate() {
 				cmd += v + " "
 			}
 			if err := o.Monitor.CmdCenter(cmd); err != nil {
-				PrintInfo(NewPrintMsg("警告", err))
+				lf.PrintInfo(lf.NewPrintMsg("警告", err))
 			}
 			return is
 		})
+		//o.omega.SetBackendCmdInterceptor()
 		o.mainFrame.GetGameListener().SetGameChatInterceptor(o.MsgDistributionCenter)
 	}()
 
@@ -646,21 +654,22 @@ func (b *LuaComponenter) MsgDistributionCenter(chat *defines.GameChat) bool {
 		for _, v := range chat.Msg {
 			msg += v + " "
 		}
-		message := Message{
+		message := lf.Message{
 			Type:    chat.Name,
 			Content: msg,
 		}
-		listener := key.(*Listener) // 获取监听器实例
+		listener := key.(*lf.Listener) // 获取监听器实例
 		select {
-		case listener.msgChannel <- message: // 尝试将消息发送到监听器的消息通道
+		case listener.MsgChannel <- message: // 尝试将消息发送到监听器的消息通道
 		default: // 如果监听器的消息通道已满
-			<-listener.msgChannel          // 从通道中读取并丢弃一条最旧的消息
-			listener.msgChannel <- message // 将新消息发送到监听器的消息通道
+			<-listener.MsgChannel          // 从通道中读取并丢弃一条最旧的消息
+			listener.MsgChannel <- message // 将新消息发送到监听器的消息通道
 		}
 		return true
 	})
 	return false
 }
+
 func getCoreComponentsPool() map[string]func() defines.CoreComponent {
 	return map[string]func() defines.CoreComponent{
 		"菜单显示":      func() defines.CoreComponent { return &Menu{BaseCoreComponent: &BaseCoreComponent{}} },

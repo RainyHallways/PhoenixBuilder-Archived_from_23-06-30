@@ -1,4 +1,4 @@
-package mainframe
+package luaFrame
 
 import (
 	"encoding/json"
@@ -283,7 +283,7 @@ func (f *FileControl) DeleteSubDir(subDirName string) error {
 type Result struct {
 	JsonFile   string
 	LuaFile    string
-	jsonConfig LuaCommpoentConfig
+	JsonConfig LuaCommpoentConfig
 }
 
 // GetLuaComponentPath返回一个包含同名字 JSON 文件和 Lua 文件路径的字典。
@@ -314,7 +314,7 @@ func (f *FileControl) GetLuaComponentData() (map[string]Result, error) {
 				results[dirName] = Result{
 					JsonFile:   jsonFile,
 					LuaFile:    luaFile,
-					jsonConfig: config,
+					JsonConfig: config,
 				}
 			}
 		}
@@ -348,7 +348,20 @@ func (f *FileControl) CreateDirAndFiles(name string) error {
 		Author:   "",
 		Config:   make(map[string]interface{}),
 	}
-	luaCode := ""
+	luaCode := `--根据注释初步了解如何书写代码
+	--gameCtrol = skynet.GetControl()初始化操作机器人游戏行为的
+	--gameCtrol.SendWsCmd("/say hellow") 发送指令
+	--gameCtrol.SendCmdAndInvokeOnResponse("/say hellow") 发送指令并且返回一个表 内有是否成功 和返回信息两个值
+	--h =gameCtrol.SendCmdAndInvokeOnResponse("/say hellow")
+	--print(h.Success,"是否成功")
+	--print(h.outputmsg,"输出信息")
+	--listener = skynet.GetListener()
+	--MsgListener = listener.GetMsgListner()
+	--while true do
+	--    print(MsgListener:NextMsg())   nextMsg可以读取玩家说话 如果玩家没有说话 那么就会堵塞直到玩家说话
+	--end
+	
+	`
 
 	subDir := filepath.Join(dir, name)
 	// 检查目录是否已经存在，如果存在则返回错误。
