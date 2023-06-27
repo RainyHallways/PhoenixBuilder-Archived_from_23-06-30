@@ -164,6 +164,8 @@ type AuthRequest struct {
 	ServerPassword string `json:"serverPassword"`
 	Key            string `json:"publicKey"`
 	FBToken        string
+	VersionId      int64  `json:"version_id"`
+	//IgnoreVersionCheck bool `json:"ignore_version_check"`
 }
 
 func (client *Client) Auth(ctx context.Context, serverCode string, serverPassword string, key string, fbtoken string) (string, int, error) {
@@ -173,6 +175,14 @@ func (client *Client) Auth(ctx context.Context, serverCode string, serverPasswor
 		ServerPassword: serverPassword,
 		Key:            key,
 		FBToken:        fbtoken,
+		VersionId:      2,
+		// ^
+		// The implemention of version_id is in no way for the purpose
+		// of blocking the access of old versions, but for saving server
+		// resource by rejecting the versions that cannot access any
+		// NEMC server anyway (for Netease's checknum authentication)
+		//
+		// The comparison of version can be suppressed by setting ignore_version_check flag.
 	}
 	msg, err := json.Marshal(authreq)
 	if err != nil {
@@ -230,8 +240,6 @@ func (client *Client) ShouldRespondUser() string {
 	msg, err := json.Marshal(rspreq)
 	if err != nil {
 		panic("Failed to encode json")
-		//return true
-		//Torrekie 22/07/21 13.12: Don't understand why this, but LNSSPsd let me made this edit
 		return ""
 	}
 	client.SendMessage(msg)
@@ -241,8 +249,6 @@ func (client *Client) ShouldRespondUser() string {
 		//This should never happen
 		fmt.Println("UNK_1")
 		panic("??????")
-		//return true
-		//Torrekie 22/07/21 13.12: and this
 		return ""
 	}
 	shouldRespond, _ := resp["username"].(string)
@@ -255,7 +261,7 @@ type FTokenRequest struct {
 	Password string `json:"password"`
 }
 
-func (client *Client) GetToken(username string, password string) string {
+func (client *Client) GetToken(username string, password string) (string, string) {
 	rspreq := &FTokenRequest{
 		Action:   "phoenix::get-token",
 		Username: username,
@@ -269,10 +275,10 @@ func (client *Client) GetToken(username string, password string) string {
 	resp, _ := <-client.serverResponse
 	code, _ := resp["code"].(float64)
 	if code != 0 {
-		return ""
+		return "", resp["message"].(string)
 	}
 	usertoken, _ := resp["token"].(string)
-	return usertoken
+	return usertoken, ""
 }
 
 type FEncRequest struct {
@@ -305,13 +311,15 @@ type FNumRequest struct {
 	Action string `json:"action"`
 	First  string `json:"1st"`
 	Second string `json:"2nd"`
+	Third  int64  `json:"3rd"`
 }
 
-func (client *Client) TransferCheckNum(first string, second string) (string, string) {
+func (client *Client) TransferCheckNum(first string, second string, third int64) (string, string, string) {
 	rspreq := &FNumRequest{
 		Action: "phoenix::transfer-check-num",
 		First:  first,
 		Second: second,
+		Third:  third,
 	}
 	msg, err := json.Marshal(rspreq)
 	if err != nil {
@@ -321,11 +329,12 @@ func (client *Client) TransferCheckNum(first string, second string) (string, str
 	resp, _ := <-client.serverResponse
 	code, _ := resp["code"].(float64)
 	if code != 0 {
-		panic("Failed to transfer checknum")
+		panic(fmt.Errorf("Failed to transfer checknum: %s",resp["message"]))
 	}
 	valM, _ := resp["valM"].(string)
 	valS, _ := resp["valS"].(string)
-	return valM, valS
+	valT, _ := resp["valT"].(string)
+	return valM, valS, valT
 }
 
 type WorldChatRequest struct {
