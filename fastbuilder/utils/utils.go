@@ -46,7 +46,7 @@ func GetMD5(i string) string {
 }
 
 func CheckUpdate(currentVersion string) (bool, string) {
-	resp, err:=http.Get("https://api.github.com/repos/LNSSPsd/PhoenixBuilder/releases/latest")
+	resp, err:=http.Get("https://api.github.com/repos/rnhws-Team/PhoenixBuilder/releases/latest")
 	if(err!=nil) {
 		fmt.Printf("Failed to check update!\nPlease check your network status.\n")
 		return false, ""
@@ -67,5 +67,5 @@ func CheckUpdate(currentVersion string) (bool, string) {
 		fmt.Printf("Unknown error occured while checking the update\n")
 		return false, ""
 	}
-	return C.compareVersion(C.CString(version[1:]),C.CString(currentVersion))!=0, version[1:]
+	return C.compareVersion(C.CString(version[3:]),C.CString(currentVersion))!=0, version[3:]
 }

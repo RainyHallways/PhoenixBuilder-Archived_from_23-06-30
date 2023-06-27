@@ -172,11 +172,12 @@ def ReleaseConnByID(connID: int) -> None:
 
 
 def RecvGamePacket(connID: int) -> bytes:
-    r = LIB.RecvGamePacket(to_GoInt(connID))
-    check_err_in_struct(r)
-    bs=r.pktBytes[:r.l]
-    freeMem(r.pktBytes)
-    return bs
+    while(True):
+        r = LIB.RecvGamePacket(to_GoInt(connID))
+        check_err_in_struct(r)
+        bs=r.pktBytes[:r.l]
+        freeMem(r.pktBytes)
+        yield bs
 
 
 def SendGamePacketBytes(connID: int, content: bytes) -> None:
@@ -265,10 +266,9 @@ if __name__ == '__main__':
     # 很多数据包服务器都不处理，所以发了也没有效果甚至会被踢下线
     # 服务器能接受的只有 指令，移动，动作 等少数数据包
     # SendGamePacketBytes(connID,asIsbytesPkt)
-
-    while True:
-        # 接收游戏数据包
-        bytesPkt = RecvGamePacket(connID)
+    # 接收游戏数据包
+    for bytesPkt in RecvGamePacket(connID):
+        
         
         # 获得数据包的类型
         packetType=inspectPacketID(bytesPkt)

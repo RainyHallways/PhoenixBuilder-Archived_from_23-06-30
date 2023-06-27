@@ -2,7 +2,7 @@ name: Build binaries and Upload to Release
 
 on:
   push:
-    branches: [ main ]
+    branches: [ Mainfull ]
     paths:
       - "version"
   workflow_dispatch: {}
@@ -201,49 +201,9 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v0.1.14
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
       with:
-        tag_name: v${{ steps.release_version.outputs.release_version }}
+        tag_name: Dev${{ steps.release_version.outputs.release_version }}
         files: |
           fb-upload.tar.gz
           build/*
-    #- name: Generate index files for storage over github
-    #  run: node index_generator.js build
-    #- name: Deploy to storage
-    #  env:
-    #    STORAGEKEY: ${{ secrets.STORAGEKEY }}
-    #  run: |
-    #    echo "$STORAGEKEY">~/storagekey
-    #    chmod 0600 ~/storagekey
-    #    git config --global user.email "24724395+LNSSPsd@users.noreply.github.com"
-    #    git config --global user.name "LNSSPsd"
-    #    git config --global core.sshCommand "ssh -i ~/storagekey"
-    #    git clone git@github.com:LNSSPsd/PhoenixBuilder-storage.git
-    #    ln PhoenixBuilder-storage/CNAME build/CNAME
-    #    cp -r PhoenixBuilder-storage/.git build/.git
-    #    cd build
-    #    git add .
-    #    git commit -m "Auto update" -a
-    #    git push
-    #    cd ..
-    #
-    #- name: Load Key
-    #  env:
-    #    FBKEY: ${{ secrets.FBKEY }}
-    #  if: ${{ env.FBKEY != '' }}
-    #  run: |
-    #    echo "$FBKEY">~/fbkey
-    #    mkdir -p ~/.ssh
-    #    printf "StrictHostKeyChecking no\nUserKnownHostsFile /dev/null">~/.ssh/config
-    #    chmod 0600 ~/fbkey
-    #
-    #- name: Upload binaries and publish
-    #  env:
-    #    FBUSER: ${{ secrets.FBUSER }}
-    #    FBIP: ${{ secrets.FBIP }}
-    #  if: ${{ env.FBUSER != '' && env.FBIP != '' }}
-    #  run: |
-    #    echo "put fb-upload.tar.gz">~/a
-    #    sftp -P 8964 -i ~/fbkey -b ~/a $FBUSER@$FBIP
-    #    ssh -i ~/fbkey $FBUSER@$FBIP -p 8964 "mkdir -p fbbinaries;mv fb-upload.tar.gz fbbinaries/;cd fbbinaries;tar -xzf *.tar.gz;rm *.tar.gz;mv build/* ./;rmdir build;rm -rf /var/www/storage/*;mv * /var/www/storage/;cd ..;rmdir fbbinaries"
-

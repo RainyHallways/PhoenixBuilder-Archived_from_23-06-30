@@ -218,17 +218,16 @@ printf "\033[32mAll basic checks complete! Proceeding the installation...\033[0m
 
 # FastBuilder Presets
 # You should not change these contents
-FB_DOMAIN="https://storage.fastbuilder.pro/"
-FB_LOCATION_ROOT=""
+FB_DOMAIN="https://raw.fastbbs.top/PhoenixBuilder-${FB_BR}/"
+FB_LOCATION_ROOT="Release/${FB_BR}${FB_VER}/"
 FB_PREFIX="phoenixbuilder"
 FB_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}${FB_PREFIX}"
 FB_VER=""
-
 # Github Releases download source presets
 # Do not use mirror as default, let users choose their own
 # The environment variables here are the default and can be overridden by the environment variables set by the export command
 GH_DOMAIN=${GH_DOMAIN:="https://github.com"}
-GH_USER=${GH_USER:="LNSSPsd"}
+GH_USER=${GH_USER:="rnhws-Team"}
 GH_REPO=${GH_REPO:="PhoenixBuilder"}
 GH_RELEASE_URL=${GH_RELEASE_URL:="releases/download/"}
 GH_LINK=${GH_LINK:="${GH_DOMAIN}/${GH_USER}/${GH_REPO}/${GH_RELEASE_URL}"}
@@ -266,47 +265,14 @@ if [[ ${SYSTEM_NAME} == "Linux" ]] && [[ $(${UNAME_GET_OSNAME}) == "Android" ]];
     BINARY_INSTALL="1"
   fi
 elif [ ${MACHINE} == "ios" ]; then
-  if [[ ${ROOT_REQUIRED} == "1" ]]; then
-    if [[ $(dpkg -L pro.fastbuilder.phoenix &> /dev/null; echo $?) == "0" ]]; then
-      FB_VER=$(dpkg-query --showformat='${Version}' --show pro.fastbuilder.phoenix)
-      printf "\033[32mFound previously installed FastBuilder, Version: ${FB_VER}\033[0m\n"
-    fi
-    printf "\033[32mIt is suggested to upgrade FastBuilder from your package manager (Cydia, Sileo, etc.).\033[0m\n"
-    printf "\033[32mBut I don't care, proceeding...\033[0m\n"
-    echo "Requesting FastBuilder Phoenix for ${ARCH} iOS..."
-    FB_PREFIX="pro.fastbuilder.phoenix"
-    FILE_TYPE=".deb"
-    # iOS does not separate architectures, iphoneos-arm for all
-    FILE_ARCH="iphoneos-arm"
-  elif [ ${ARCH} != "arm64" ]; then
-    printf "\033[31mFastBuilder no longer support ${ARCH} iOS! Stopping.\033[0m\n"
-    exit 1
-  elif [[ $(dpkg --version &> /dev/null; echo $?) != 0 ]] || [[ ${ROOT_REQUIRED} != "1" ]]; then
-    printf "\033[32mWe can't call your Debian Packager, Requesting binary executables.\033[0m\n"
-    FB_PREFIX="phoenixbuilder-ios-executable"
-    FILE_TYPE=""
-    FILE_ARCH=""
-    BINARY_INSTALL="1"
-  fi
+  printf "\033[0;30;41m  Dev预览版不支持ios系统!  \033[0m\n"
+  quit_installer 0
 elif [ ${MACHINE} == "macos" ]; then
-  # Fat Mach-O contains multiple arches, and yes we did that
-  if [[ ${ARCH} == "arm64" ]] || [[ ${ARCH} == "x86_64" ]]; then
-    echo "Requesting FastBuilder Phoenix for ${ARCH} macOS..."
-    FB_PREFIX="phoenixbuilder-macos"
-    FILE_TYPE=""
-    FILE_ARCH=""
-    BINARY_INSTALL="1"
-  else
-    printf "\033[31mFastBuilder no longer support ${ARCH} macOS! Stopping.\033[0m\n"
-    exit 1
-  fi
+  printf "\033[0;30;41m  Dev预览版不支持Mac系统!  \033[0m\n"
+  quit_installer 0
 elif [[ ${SYSTEM_NAME} == "NetBSD" ]] || [[ ${SYSTEM_NAME} == "FreeBSD" ]] || [[ ${SYSTEM_NAME} == "OpenBSD" ]]; then
-  echo           "If you met 404 error in further downloading, report it at"
-  printf "\033[32m  https://github.com/LNSSPsd/PhoenixBuilder/issues\033[0m\n"
-  FB_PREFIX="phoenixbuilder-$(echo ${SYSTEM_NAME} | tr '[:upper:]' '[:lower:]')-executable-"
-  FILE_TYPE=""
-  FILE_ARCH="${ARCH}"
-  BINARY_INSTALL="1"
+  printf "\033[0;30;41m  Dev预览版不支持BSD系统!  \033[0m\n"
+  quit_installer 0
 elif [[ ${SYSTEM_NAME} == "Linux" ]] && [[ $(${UNAME_GET_OSNAME}) != "Android" ]]; then
   # Finally, Linux
   echo     "NOTE: We only provide x86_64 and arm64 executables currently, if"
@@ -342,6 +308,7 @@ report_error() {
   if [ ${DL_TOOL_NAME} == "curl" ]; then
     if [ ${1} == 22 ]; then
       printf "\033[031Download failure! Requested resources not exist! (curl: 22)\033[0m\n"
+      printf "\033[031请检查此分支内是否包括此版本！\033[0m\n"
       printf "\033[031 ${FB_LINK}\033[0m\n"
     elif [ ${1} == 3 ]; then
       printf "\033[031URL malformed. (curl: 3)\033[0m\n"
@@ -413,7 +380,7 @@ if [[ ${BINARY_INSTALL} == "1" ]]; then
   FB_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}${FB_PREFIX}${FILE_ARCH}${FILE_TYPE}"
   if [[ ${PB_USE_GH_REPO} == "1" ]]; then
     printf "\033[32mOriginal download link: ${FB_LINK}\033[0m\n"
-    FB_LINK="${GH_LINK}v${FB_VER}/${FB_PREFIX}${FILE_ARCH}${FILE_TYPE}"
+    FB_LINK="${GH_LINK}Dev${FB_VER}/${FB_PREFIX}${FILE_ARCH}${FILE_TYPE}"
     printf "\033[32mGithub download link: ${FB_LINK}\033[0m\n"
   fi
   printf "\033[33mIf the official storage does not work for you, you can try to assign environment variable \"PB_USE_GH_REPO=1\" for the script to download stuff from Github.\033[0m\n"
@@ -446,7 +413,7 @@ else
   FB_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}${FB_PREFIX}_${FB_VER}_${FILE_ARCH}${FILE_TYPE}"
   if [[ ${PB_USE_GH_REPO} == "1" ]]; then
     printf "\033[32mOriginal download link: ${FB_LINK}\033[0m\n"
-    FB_LINK="${GH_LINK}v${FB_VER}/${FB_PREFIX}_${FB_VER}_${FILE_ARCH}${FILE_TYPE}"
+    FB_LINK="${GH_LINK}Dev${FB_VER}/${FB_PREFIX}_${FB_VER}_${FILE_ARCH}${FILE_TYPE}"
     printf "\033[32mGithub download link: ${FB_LINK}\033[0m\n"
   else
     printf "\033[33mIf the official storage does not work for you, you can try to assign environment variable \"PB_USE_GH_REPO=1\" for the script to download stuff from Github.\033[0m\n"
