@@ -2,73 +2,68 @@ package main
 
 import (
 	"context"
-	minecraft "fastbuilder-core/lib/minecraft/gophertunnel"
-	"fastbuilder-core/lib/minecraft/gophertunnel/protocol/packet"
-	"fastbuilder-core/lib/minecraft/neomega/bundle"
-	"fastbuilder-core/lib/minecraft/neomega/decouple/cmdsender"
-	"fastbuilder-core/lib/nemc/login_requester/cv4/fbauth"
 	"fmt"
+	"phoenixbuilder/fastbuilder/core"
+	"phoenixbuilder/lib/fbauth"
+	"phoenixbuilder/lib/helpers/bot_privilege"
+	"phoenixbuilder/lib/helpers/fbuser"
+	"phoenixbuilder/lib/minecraft/neomega/bundle"
+	"phoenixbuilder/lib/minecraft/neomega/decouple/cmdsender"
+	"phoenixbuilder/minecraft/protocol/packet"
 	"time"
 )
 
-var errStrFailToConnectAuthServer = "无法连接到登陆服务器"
 var errFBUserCenterLoginFail = "无效的 Fastbuilder 用户名或密码"
-var errCannotConnectToRentalServer = "无法连接到租赁服, 可能是用户 FBToken 无效、无租赁服登陆权限、租赁服未开放"
 var errRentalServerDisconnected = "与租赁服的连接已断开"
 
-func WrapAuthenticator(ctx context.Context, authServer, userName, userPassword, userToken, serverCode, serverPassword string) (authenticator *fbauth.AccessWrapper, err error) {
-	client := fbauth.NewClient(ctx)
-	err = client.EstablishConnectionToAuthServer(authServer)
-	if err != nil {
-		return nil, fmt.Errorf("%v: %v", errStrFailToConnectAuthServer, err)
-	}
+func WrapAuthenticator(connectContext context.Context, client *fbauth.Client, userName, userPassword, userToken, serverCode, serverPassword string) (authenticator *fbauth.AccessWrapper, writeBackToken string, err error) {
 	if userToken == "" {
-		authenticator, err = fbauth.NewAccessWrapperByPassword(client, userName, userPassword)
+		userToken, err = fbauth.GetTokenByPassword(connectContext, client, userName, userPassword)
 		if err != nil {
-			return nil, fmt.Errorf("%v: %v", errFBUserCenterLoginFail, err)
+			return nil, "", fmt.Errorf("%v: %v", errFBUserCenterLoginFail, err)
 		}
-	} else {
-		authenticator = fbauth.NewAccessWrapper(client, userToken)
 	}
+	authenticator = fbauth.NewAccessWrapper(client, userToken)
 	authenticator.SetServerInfo(serverCode, serverPassword)
-	return authenticator, nil
-}
-
-func InitMinecraftConnection(ctx context.Context, authenticator minecraft.Authenticator, timeOut time.Duration) (client *minecraft.Conn, err error) {
-	ctx, _ = context.WithTimeout(ctx, 30*time.Second)
-	dialer := minecraft.Dialer{
-		Authenticator: authenticator,
-	}
-	if client, err = dialer.DialContext(ctx, "raknet"); err != nil {
-		return nil, fmt.Errorf("%v: %v", errCannotConnectToRentalServer, err)
-	}
-	client.WritePacket(&packet.ClientCacheStatus{
-		Enabled: false,
-	})
-	return client, nil
+	return authenticator, writeBackToken, nil
 }
 
 func main() {
 	authServer := "wss://api.fastbuilder.pro:2053/"
-	userName := "userName"
-	userPassword := "userPassword"
-	userToken := ""
-	serverCode := "serverCode"
-	serverPassword := ""
-
+	fmt.Println("Connecting to FB Server...")
 	ctx := context.Background()
+	fbClient := fbauth.NewClient(ctx)
+	{
+		connectCtx, _ := context.WithTimeout(ctx, 30*time.Second)
+		err := fbClient.EstablishConnectionToAuthServer(connectCtx, authServer)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	fmt.Println("Reading Info...")
+	userName, userPassword, userToken, serverCode, serverPassword, err := fbuser.ReadInfo("", "", "", "", "")
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println("Authenticating...")
-	authenticator, err := WrapAuthenticator(ctx, authServer, userName, userPassword, userToken, serverCode, serverPassword)
+	ctx, _ = context.WithTimeout(ctx, 30*time.Second)
+	authenticator, writeBackToken, err := WrapAuthenticator(ctx, fbClient, userName, userPassword, userToken, serverCode, serverPassword)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Server: (Code:%v, Password:%v)\n", authenticator.ServerCode, authenticator.ServerPassword)
+	if writeBackToken != "" {
+		fbuser.WriteToken(writeBackToken, fbuser.LoadTokenPath())
+	}
 
-	client, err := InitMinecraftConnection(ctx, authenticator, 30*time.Second)
+	fmt.Printf("Connecting to MC Server: (Code:%v, Password:%v)\n", authenticator.ServerCode, authenticator.ServerPassword)
+	ctx, _ = context.WithTimeout(ctx, 30*time.Second)
+	client, err := core.InitMCConnection(ctx, authenticator)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("Successfully Connected to MC Server!\n")
 	var pkt packet.Packet
 	omega := bundle.NewMicroOmega(client, bundle.MicroOmegaOption{
 		CmdSenderOptions: cmdsender.Options{
@@ -76,6 +71,27 @@ func main() {
 		},
 		PrintUQHolderDebugInfo: false,
 	})
+	fmt.Printf("Adding Omega Components...\n")
+	bot_privilege.NewPyRPCResponser(omega, authenticator.GetFBUid(),
+		func(content, uid string) string {
+			ctx, _ = context.WithTimeout(ctx, 30*time.Second)
+			data, err := authenticator.TransferData(ctx, content, uid)
+			if err != nil {
+				panic(err)
+			}
+			return data
+		},
+		func(firstArg, secondArg string) (valM string, valS string) {
+			ctx, _ = context.WithTimeout(ctx, 30*time.Second)
+			valM, valS, err = authenticator.TransferCheckNum(ctx, firstArg, secondArg)
+			if err != nil {
+				panic(err)
+			}
+			return
+		},
+	)
+	helper := bot_privilege.NewSetupHelper(omega)
+	fmt.Printf("Running Omega...\n")
 	go func() {
 		for {
 			pkt, err = client.ReadPacket()
@@ -86,7 +102,6 @@ func main() {
 		}
 	}()
 
-	helper := NewSetupHelper(omega)
-	helper.WaitOK()
-	fmt.Println("演示程序执行完毕")
+	helper.WaitOK(time.Minute * 3)
+	fmt.Println("Minimal Client exited.")
 }

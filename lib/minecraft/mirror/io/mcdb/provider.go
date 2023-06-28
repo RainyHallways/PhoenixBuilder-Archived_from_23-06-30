@@ -3,17 +3,18 @@ package mcdb
 import (
 	"bytes"
 	"encoding/binary"
-	"fastbuilder-core/lib/minecraft/mirror/define"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"phoenixbuilder/lib/minecraft/mirror/define"
 	"time"
 
-	"fastbuilder-core/lib/minecraft/gophertunnel/nbt"
-	"fastbuilder-core/lib/minecraft/mirror"
+	"phoenixbuilder/lib/minecraft/mirror"
+	"phoenixbuilder/minecraft/nbt"
 
-	"fastbuilder-core/lib/minecraft/mirror/chunk"
+	"phoenixbuilder/lib/minecraft/mirror/chunk"
 
 	"github.com/df-mc/goleveldb/leveldb"
 	"github.com/df-mc/goleveldb/leveldb/opt"
@@ -35,7 +36,9 @@ const chunkVersion = 27
 // A compression type may be passed which will be used for the compression of new blocks written to the database. This
 // will only influence the compression. Decompression of the database will happen based on IDs found in the compressed
 // blocks.
-func New(dir string, compression opt.Compression) (*Provider, error) {
+var ErrCannotOpenMCDB = errors.New("cannot open mc database")
+
+func New(dir string, compression opt.Compression, readOnly bool, dbOptions *opt.Options) (*Provider, error) {
 	_ = os.MkdirAll(filepath.Join(dir, "db"), 0777)
 
 	p := &Provider{dir: dir}
@@ -57,7 +60,6 @@ func New(dir string, compression opt.Compression) (*Provider, error) {
 		if err := nbt.UnmarshalEncoding(f[8:], &p.D, nbt.LittleEndian); err != nil {
 			return fmt.Errorf("error decoding level.dat NBT: %w", err)
 		}
-		p.D.WorldStartCount++
 		return nil
 	}
 
@@ -76,11 +78,17 @@ func New(dir string, compression opt.Compression) (*Provider, error) {
 		}
 	}
 
-	if db, err := leveldb.OpenFile(
-		filepath.Join(dir, "db"), &opt.Options{
+	if dbOptions == nil {
+		dbOptions = &opt.Options{
 			Compression: compression,
 			BlockSize:   16 * opt.KiB,
-		}); err != nil {
+		}
+		if readOnly {
+			dbOptions.ReadOnly = true
+		}
+	}
+
+	if db, err := leveldb.OpenFile(filepath.Join(dir, "db"), dbOptions); err != nil {
 		return nil, fmt.Errorf("error opening leveldb database: %w", err)
 	} else {
 		p.DB = db
@@ -167,7 +175,7 @@ func (p *Provider) loadChunk(position define.ChunkPos) (c *chunk.Chunk, exists b
 }
 
 // LoadBlockNBT loads all block entities from the chunk position passed.
-func (p *Provider) loadBlockNBT(position define.ChunkPos) ([]map[string]any, error) {
+func (p *Provider) LoadBlockNBT(position define.ChunkPos) ([]map[string]any, error) {
 	data, err := p.DB.Get(append(p.index(position), keyBlockEntities), nil)
 	if err != leveldb.ErrNotFound && err != nil {
 		return nil, err
@@ -207,7 +215,7 @@ func (p *Provider) Get(pos define.ChunkPos) (data *mirror.ChunkData) {
 	} else {
 		cd.Chunk = c
 	}
-	if nbts, err := p.loadBlockNBT(pos); err == nil {
+	if nbts, err := p.LoadBlockNBT(pos); err == nil {
 		cd.BlockNbts = make(map[define.CubePos]map[string]interface{})
 		for _, nbt := range nbts {
 			if pos, success := define.GetCubePosFromNBT(nbt); success {
@@ -351,9 +359,11 @@ func (p *Provider) saveAuxInfo() (err error) {
 }
 
 // Close closes the provider, saving any file that might need to be saved, such as the level.dat.
-func (p *Provider) Close() error {
+func (p *Provider) Close(readOnly bool) error {
 	// p.initDefaultLevelDat()
-	p.saveAuxInfo()
+	if !readOnly {
+		p.saveAuxInfo()
+	}
 	return p.DB.Close()
 }
 

@@ -356,6 +356,8 @@ func (o *Omega) bootstrapComponents() (success bool) {
 			} else {
 				component = componentFn()
 			}
+		} else if Source == "Lua-Component" {
+			//跳过交给lua组件处理
 		} else if strings.HasPrefix(Source, "第三方::") {
 			if _component, hasK := thirdPartPool[Name]; !hasK {
 				pterm.Error.Println("没有找到第三方组件: " + Name)
@@ -453,7 +455,7 @@ func (o *Omega) Bootstrap(adaptor defines.ConnectionAdaptor) {
 	o.checkAndLoadConfig()
 
 	o.backendLogger.Write("启用 Game Ctrl 模块")
-	o.GameCtrl = newGameCtrl(o, adaptor.GetInteraction())
+	o.GameCtrl = newGameCtrl(o)
 
 	o.backendLogger.Write("初始化 Context ...")
 	o.initContext()

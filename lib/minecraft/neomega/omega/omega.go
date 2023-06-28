@@ -1,7 +1,10 @@
 package omega
 
 import (
-	"fastbuilder-core/lib/minecraft/gophertunnel/protocol/packet"
+	"phoenixbuilder/lib/minecraft/mirror/define"
+	"phoenixbuilder/minecraft/protocol/packet"
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -29,11 +32,11 @@ type InteractCore interface {
 }
 
 type CmdSender interface {
-	SendCmd(cmd string)
+	SendWSCmd(cmd string)
 	SendCmdWithUUID(cmd string, ud uuid.UUID, ws bool)
 	SendWOCmd(cmd string)
-	SendCmdAndInvokeOnResponse(string, func(output *packet.CommandOutput))
-	SendCmdAndInvokeOnResponseWithFeedback(string, func(output *packet.CommandOutput))
+	SendWSCmdAndInvokeOnResponse(string, func(output *packet.CommandOutput))
+	SendPlayerCmdAndInvokeOnResponseWithFeedback(string, func(output *packet.CommandOutput))
 }
 
 type InfoSender interface {
@@ -45,11 +48,22 @@ type InfoSender interface {
 	SubTitleTo(target string, msg string)
 }
 
+type NBTBlockPlacer interface {
+	PlaceCommandBlock(pos define.CubePos, commandBlockName string, blockDataOrStateStr string, withMove, withAirPrePlace bool, updatePacket *packet.CommandBlockUpdate,
+		onDone func(done bool), timeOut time.Duration)
+	PlaceSignBlock(pos define.CubePos, signBlockName string, blockDataOrStateStr string, withMove, withAirPrePlace bool, updatePacket *packet.BlockActorData, onDone func(done bool), timeOut time.Duration)
+}
+
+type BlockPlacer interface {
+	NBTBlockPlacer
+}
+
 type MicroOmega interface {
 	GetGameControl() interface {
 		InteractCore
 		CmdSender
 		InfoSender
+		BlockPlacer
 	}
 	GetGameListener() PacketDispatcher
 	GameReactable

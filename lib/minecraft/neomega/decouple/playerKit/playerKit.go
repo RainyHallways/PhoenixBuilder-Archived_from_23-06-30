@@ -2,10 +2,10 @@ package playerKit
 
 import (
 	"encoding/json"
-	"fastbuilder-core/lib/minecraft/gophertunnel/protocol/packet"
-	"fastbuilder-core/lib/minecraft/mirror/define"
-	"fastbuilder-core/lib/minecraft/neomega/omega"
-	"fastbuilder-core/lib/minecraft/omega/utils"
+	"phoenixbuilder/lib/minecraft/mirror/define"
+	"phoenixbuilder/lib/minecraft/neomega/omega"
+	"phoenixbuilder/minecraft/protocol/packet"
+	"phoenixbuilder/omega/utils"
 	"time"
 )
 
@@ -92,7 +92,7 @@ func (p *PlayerKit) GetPos(selector string) chan *define.CubePos {
 		Uuid string `json:"uniqueId"`
 	}
 
-	p.ctrl.SendCmdAndInvokeOnResponse("querytarget "+s, func(output *packet.CommandOutput) {
+	p.ctrl.SendWSCmdAndInvokeOnResponse("querytarget "+s, func(output *packet.CommandOutput) {
 		if output.SuccessCount > 0 {
 			for _, v := range output.OutputMessages {
 				for _, j := range v.Parameters {

@@ -3,6 +3,8 @@ name: Check
 on:
   push:
     branches: [ Canary ]
+  pull_request: {}
+  workflow_dispatch: {}
 
 jobs:
   phoenixbuilder-check:

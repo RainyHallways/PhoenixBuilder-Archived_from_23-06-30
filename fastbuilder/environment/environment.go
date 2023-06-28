@@ -27,6 +27,7 @@ type PBEnvironment struct {
 	UQHolder                  interface{}
 	Resources                 interface{}
 	ResourcesUpdater          interface{}
+	GlobalAPI                 interface{}
 	TaskHolder                interface{}
 	OmegaHolder               interface{}
 	OmegaAdaptorHolder        interface{}

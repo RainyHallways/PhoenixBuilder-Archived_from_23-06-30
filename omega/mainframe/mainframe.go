@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"phoenixbuilder/ResourcesControlCenter"
 	"phoenixbuilder/fastbuilder/uqHolder"
 	"phoenixbuilder/minecraft/protocol/packet"
 	"phoenixbuilder/omega/defines"
@@ -29,9 +28,8 @@ type Omega struct {
 
 	storageRoot string
 
-	uqHolder  *uqHolder.UQHolder
-	resources *ResourcesControlCenter.Resources
-	ctx       map[string]interface{}
+	uqHolder *uqHolder.UQHolder
+	ctx      map[string]interface{}
 
 	backendLogger    defines.LineDst
 	redAlertLogger   defines.LineDst
@@ -86,10 +84,6 @@ func (o *Omega) SetGlobalContext(key string, entry interface{}) {
 
 func (o *Omega) GetUQHolder() *uqHolder.UQHolder {
 	return o.uqHolder
-}
-
-func (o *Omega) GetResources() *ResourcesControlCenter.Resources {
-	return o.resources
 }
 
 func (o *Omega) GetWorldsDir(elem ...string) string {

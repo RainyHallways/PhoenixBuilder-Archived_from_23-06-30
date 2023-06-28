@@ -2,9 +2,9 @@ package chunk
 
 import (
 	"bytes"
-	"fastbuilder-core/lib/minecraft/gophertunnel/nbt"
-	"fastbuilder-core/lib/minecraft/mirror/define"
 	"fmt"
+	"phoenixbuilder/lib/minecraft/mirror/define"
+	"phoenixbuilder/minecraft/nbt"
 
 	"github.com/pterm/pterm"
 )
@@ -83,12 +83,7 @@ func NEMCSubChunkDecode(data []byte) (int8, *SubChunk, []map[string]interface{},
 // DiskDecode decodes the data from a SerialisedData object into a chunk and returns it. If the data was
 // invalid, an error is returned.
 func DiskDecode(data SerialisedData, r define.Range) (*Chunk, error) {
-	air, ok := StateToRuntimeID("minecraft:air", nil)
-	if !ok {
-		panic("cannot find air runtime ID")
-	}
-
-	c := New(air, r)
+	c := New(AirRID, r)
 
 	var err error
 	for i, sub := range data.SubChunks {
@@ -121,7 +116,7 @@ func decodeSubChunk(buf *bytes.Buffer, c *Chunk, index *byte, e Encoding) (*SubC
 		if err != nil {
 			return nil, err
 		}
-		sub.storages = append(sub.storages, storage)
+		sub.Storages = append(sub.Storages, storage)
 	case 8, 9:
 		// Version 8 allows up to 256 layers for one sub chunk.
 		storageCount, err := buf.ReadByte()
@@ -137,14 +132,32 @@ func decodeSubChunk(buf *bytes.Buffer, c *Chunk, index *byte, e Encoding) (*SubC
 			// value of the subchunk. This means that we need to translate it to an index.
 			*index = uint8(int8(uIndex) - int8(c.r[0]>>4))
 		}
-		sub.storages = make([]*PalettedStorage, storageCount)
+		sub.Storages = make([]*PalettedStorage, storageCount)
 
 		for i := byte(0); i < storageCount; i++ {
-			sub.storages[i], err = decodePalettedStorage(buf, e, BlockPaletteEncoding)
+			sub.Storages[i], err = decodePalettedStorage(buf, e, BlockPaletteEncoding)
 			if err != nil {
 				return nil, err
 			}
+
 		}
+		//if storageCount > 1 {
+		//	for x := uint8(0); x < 16; x++ {
+		//		for y := uint8(0); y < 16; y++ {
+		//			for z := uint8(0); z < 16; z++ {
+		//				for i := 0; i < int(storageCount); i++ {
+		//					rtid := sub.storages[i].At(x, y, z)
+		//					if rtid != AirRID {
+		//						if i != 0 {
+		//							fmt.Printf("%v, %v\n", i, rtid)
+		//						}
+		//					}
+		//				}
+		//			}
+		//		}
+		//	}
+		//}
+
 	}
 	return sub, nil
 }
@@ -165,7 +178,7 @@ func decodeSubChunkNEMC(buf *bytes.Buffer, e Encoding, airRID uint32) (int8, *Su
 		if err != nil {
 			return Index, nil, err
 		}
-		sub.storages = append(sub.storages, storage)
+		sub.Storages = append(sub.Storages, storage)
 	case 8, 9:
 		// Version 8 allows up to 256 layers for one sub chunk.
 		storageCount, err := buf.ReadByte()
@@ -181,10 +194,10 @@ func decodeSubChunkNEMC(buf *bytes.Buffer, e Encoding, airRID uint32) (int8, *Su
 			// The index as written here isn't the actual index of the subchunk within the chunk. Rather, it is the Y
 			// value of the subchunk. This means that we need to translate it to an index.
 		}
-		sub.storages = make([]*PalettedStorage, storageCount)
+		sub.Storages = make([]*PalettedStorage, storageCount)
 
 		for i := byte(0); i < storageCount; i++ {
-			sub.storages[i], err = decodePalettedStorage(buf, e, BlockPaletteEncoding)
+			sub.Storages[i], err = decodePalettedStorage(buf, e, BlockPaletteEncoding)
 			if err != nil {
 				return Index, nil, err
 			}
@@ -205,8 +218,8 @@ func decodePalettedStorage(buf *bytes.Buffer, e Encoding, pe paletteEncoding) (*
 		return nil, nil
 	}
 
-	size := paletteSize(blockSize)
-	uint32Count := size.uint32s()
+	size := PaletteSize(blockSize)
+	uint32Count := size.Uint32s()
 
 	uint32s := make([]uint32, uint32Count)
 	byteCount := uint32Count * 4
@@ -216,9 +229,9 @@ func decodePalettedStorage(buf *bytes.Buffer, e Encoding, pe paletteEncoding) (*
 		return nil, fmt.Errorf("cannot read paletted storage (size=%v) %T: not enough block data present: expected %v bytes, got %v", blockSize, pe, byteCount, len(data))
 	}
 	for i := 0; i < uint32Count; i++ {
-		// Explicitly don't use the binary package to greatly improve performance of reading the uint32s.
+		// Explicitly don't use the binary package to greatly improve performance of reading the Uint32s.
 		uint32s[i] = uint32(data[i*4]) | uint32(data[i*4+1])<<8 | uint32(data[i*4+2])<<16 | uint32(data[i*4+3])<<24
 	}
-	p, err := e.decodePalette(buf, paletteSize(blockSize), pe)
-	return newPalettedStorage(uint32s, p), err
+	p, err := e.decodePalette(buf, PaletteSize(blockSize), pe)
+	return NewPalettedStorage(uint32s, p), err
 }

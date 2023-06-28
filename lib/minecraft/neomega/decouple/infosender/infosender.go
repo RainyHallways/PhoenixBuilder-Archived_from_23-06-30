@@ -2,9 +2,9 @@ package infosender
 
 import (
 	"encoding/json"
-	"fastbuilder-core/lib/minecraft/gophertunnel/protocol/packet"
-	"fastbuilder-core/lib/minecraft/neomega/omega"
 	"fmt"
+	"phoenixbuilder/lib/minecraft/neomega/omega"
+	"phoenixbuilder/minecraft/protocol/packet"
 	"strings"
 )
 
@@ -77,17 +77,17 @@ func (i *InfoSender) ActionBarTo(target string, msg string) {
 func (i *InfoSender) TitleTo(target string, msg string) {
 	content := toJsonRawString(msg)
 	if strings.HasPrefix(target, "@") {
-		i.SendCmd(fmt.Sprintf("titleraw %v title %v", target, content))
+		i.SendWSCmd(fmt.Sprintf("titleraw %v title %v", target, content))
 	} else {
-		i.SendCmd(fmt.Sprintf("titleraw \"%v\" title %v", target, content))
+		i.SendWSCmd(fmt.Sprintf("titleraw \"%v\" title %v", target, content))
 	}
 }
 
 func (i *InfoSender) SubTitleTo(target string, msg string) {
 	content := toJsonRawString(msg)
 	if strings.HasPrefix(target, "@") {
-		i.SendCmd(fmt.Sprintf("titleraw %v subtitle %v", target, content))
+		i.SendWSCmd(fmt.Sprintf("titleraw %v subtitle %v", target, content))
 	} else {
-		i.SendCmd(fmt.Sprintf("titleraw \"%v\" subtitle %v", target, content))
+		i.SendWSCmd(fmt.Sprintf("titleraw \"%v\" subtitle %v", target, content))
 	}
 }

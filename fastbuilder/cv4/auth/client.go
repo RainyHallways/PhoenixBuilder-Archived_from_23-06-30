@@ -3,6 +3,7 @@ package fbauth
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -12,7 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"phoenixbuilder/bridge/bridge_fmt"
+
 	"phoenixbuilder/fastbuilder/args"
 	"phoenixbuilder/fastbuilder/environment"
 	I18n "phoenixbuilder/fastbuilder/i18n"
@@ -29,8 +30,8 @@ type Client struct {
 	client *websocket.Conn
 
 	peerNoEncryption bool
-	encryptor      *encryptionSession
-	serverResponse chan map[string]interface{}
+	encryptor        *encryptionSession
+	serverResponse   chan map[string]interface{}
 
 	closed bool
 
@@ -104,7 +105,7 @@ func CreateClient(env *environment.PBEnvironment) *Client {
 					continue
 				}
 			} else if msgaction == "no_encryption" {
-				authclient.peerNoEncryption=true
+				authclient.peerNoEncryption = true
 				authclient.SendMessage([]byte(`{"action":"accept_no_encryption"}`))
 				close(encrypted)
 			}
@@ -136,7 +137,7 @@ func CreateClient(env *environment.PBEnvironment) *Client {
 }
 
 func (client *Client) CanSendMessage() bool {
-	return (client.encryptor != nil||client.peerNoEncryption) && !client.closed
+	return (client.encryptor != nil || client.peerNoEncryption) && !client.closed
 }
 
 func (client *Client) SendMessage(data []byte) {
@@ -144,7 +145,7 @@ func (client *Client) SendMessage(data []byte) {
 		panic("早すぎる")
 	}
 	if client.closed {
-		bridge_fmt.Println("Error: SendMessage: Connection closed")
+		fmt.Println("Error: SendMessage: Connection closed")
 		panic("Message after auth close")
 	}
 	if !client.peerNoEncryption {
@@ -163,55 +164,69 @@ type AuthRequest struct {
 	ServerPassword string `json:"serverPassword"`
 	Key            string `json:"publicKey"`
 	FBToken        string
+	VersionId      int64  `json:"version_id"`
+	//IgnoreVersionCheck bool `json:"ignore_version_check"`
 }
 
-func (client *Client) Auth(serverCode string, serverPassword string, key string, fbtoken string) (string, int, error) {
+func (client *Client) Auth(ctx context.Context, serverCode string, serverPassword string, key string, fbtoken string) (string, int, error) {
 	authreq := &AuthRequest{
 		Action:         "phoenix::login",
 		ServerCode:     serverCode,
 		ServerPassword: serverPassword,
 		Key:            key,
 		FBToken:        fbtoken,
+		VersionId:      2,
+		// ^
+		// The implemention of version_id is in no way for the purpose
+		// of blocking the access of old versions, but for saving server
+		// resource by rejecting the versions that cannot access any
+		// NEMC server anyway (for Netease's checknum authentication)
+		//
+		// The comparison of version can be suppressed by setting ignore_version_check flag.
 	}
 	msg, err := json.Marshal(authreq)
 	if err != nil {
 		panic("Failed to encode json")
 	}
 	client.SendMessage(msg)
-	resp, _ := <-client.serverResponse
-	code, _ := resp["code"].(float64)
-	if code != 0 {
-		err, _ := resp["message"].(string)
-		trans, hasTranslation := resp["translation"].(float64)
-		if hasTranslation {
-			err = I18n.T(uint16(trans))
+	select {
+	case <-ctx.Done():
+		return "", 0, fmt.Errorf("fb auth server response time out (%v)", err)
+	case resp, _ := <-client.serverResponse:
+		code, _ := resp["code"].(float64)
+		if code != 0 {
+			err, _ := resp["message"].(string)
+			trans, hasTranslation := resp["translation"].(float64)
+			if hasTranslation {
+				err = I18n.T(uint16(trans))
+			}
+			return "", int(code), fmt.Errorf("%s", err)
 		}
-		return "", int(code), fmt.Errorf("%s", err)
+		uc_username, _ := resp["username"].(string)
+		u_uid, _ := resp["uid"].(string)
+		client.env.FBUCUsername = uc_username
+		client.env.Uid = u_uid
+		str, _ := resp["chainInfo"].(string)
+		client.env.CertSigning = true
+		if signingKey, success := resp["privateSigningKey"].(string); success {
+			client.env.LocalKey = signingKey
+		} else {
+			pterm.Error.Println("Failed to fetch privateSigningKey from server")
+			client.env.CertSigning = false
+			client.env.LocalKey = ""
+		}
+		if keyProve, success := resp["prove"].(string); success {
+			client.env.LocalCert = keyProve
+		} else {
+			pterm.Error.Println("Failed to fetch keyProve from server")
+			client.env.CertSigning = false
+			client.env.LocalCert = ""
+		}
+		if !client.env.CertSigning {
+			pterm.Error.Println("CertSigning is disabled for errors above.")
+		}
+		return str, 0, nil
 	}
-	uc_username, _ := resp["username"].(string)
-	u_uid, _ := resp["uid"].(string)
-	client.env.FBUCUsername = uc_username
-	client.env.Uid = u_uid
-	str, _ := resp["chainInfo"].(string)
-	client.env.CertSigning = true
-	if signingKey, success := resp["privateSigningKey"].(string); success {
-		client.env.LocalKey = signingKey
-	}else{
-		pterm.Error.Println("Failed to fetch privateSigningKey from server")
-		client.env.CertSigning = false
-		client.env.LocalKey = ""
-	}
-	if keyProve, success := resp["prove"].(string); success {
-		client.env.LocalCert = keyProve
-	}else{
-		pterm.Error.Println("Failed to fetch keyProve from server")
-		client.env.CertSigning = false
-		client.env.LocalCert = ""
-	}
-	if(!client.env.CertSigning) {
-		pterm.Error.Println("CertSigning is disabled for errors above.")
-	}
-	return str, 0, nil
 }
 
 type RespondRequest struct {
@@ -225,8 +240,6 @@ func (client *Client) ShouldRespondUser() string {
 	msg, err := json.Marshal(rspreq)
 	if err != nil {
 		panic("Failed to encode json")
-		//return true
-		//Torrekie 22/07/21 13.12: Don't understand why this, but LNSSPsd let me made this edit
 		return ""
 	}
 	client.SendMessage(msg)
@@ -234,10 +247,8 @@ func (client *Client) ShouldRespondUser() string {
 	code, _ := resp["code"].(float64)
 	if code != 0 {
 		//This should never happen
-		bridge_fmt.Println("UNK_1")
+		fmt.Println("UNK_1")
 		panic("??????")
-		//return true
-		//Torrekie 22/07/21 13.12: and this
 		return ""
 	}
 	shouldRespond, _ := resp["username"].(string)
@@ -250,7 +261,7 @@ type FTokenRequest struct {
 	Password string `json:"password"`
 }
 
-func (client *Client) GetToken(username string, password string) string {
+func (client *Client) GetToken(username string, password string) (string, string) {
 	rspreq := &FTokenRequest{
 		Action:   "phoenix::get-token",
 		Username: username,
@@ -264,10 +275,10 @@ func (client *Client) GetToken(username string, password string) string {
 	resp, _ := <-client.serverResponse
 	code, _ := resp["code"].(float64)
 	if code != 0 {
-		return ""
+		return "", resp["message"].(string)
 	}
 	usertoken, _ := resp["token"].(string)
-	return usertoken
+	return usertoken, ""
 }
 
 type FEncRequest struct {
@@ -294,6 +305,36 @@ func (client *Client) TransferData(content string, uid string) string {
 	}
 	data, _ := resp["data"].(string)
 	return data
+}
+
+type FNumRequest struct {
+	Action string `json:"action"`
+	First  string `json:"1st"`
+	Second string `json:"2nd"`
+	Third  int64  `json:"3rd"`
+}
+
+func (client *Client) TransferCheckNum(first string, second string, third int64) (string, string, string) {
+	rspreq := &FNumRequest{
+		Action: "phoenix::transfer-check-num",
+		First:  first,
+		Second: second,
+		Third:  third,
+	}
+	msg, err := json.Marshal(rspreq)
+	if err != nil {
+		panic("Failed to encode json")
+	}
+	client.SendMessage(msg)
+	resp, _ := <-client.serverResponse
+	code, _ := resp["code"].(float64)
+	if code != 0 {
+		panic(fmt.Errorf("Failed to transfer checknum: %s",resp["message"]))
+	}
+	valM, _ := resp["valM"].(string)
+	valS, _ := resp["valS"].(string)
+	valT, _ := resp["valT"].(string)
+	return valM, valS, valT
 }
 
 type WorldChatRequest struct {
