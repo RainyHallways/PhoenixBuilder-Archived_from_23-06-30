@@ -3,6 +3,7 @@ package embed
 import (
 	"crypto/md5"
 	"fmt"
+	"phoenixbuilder/GameControl/GlobalAPI"
 	"phoenixbuilder/fastbuilder/environment"
 	"phoenixbuilder/fastbuilder/function"
 	"phoenixbuilder/fastbuilder/uqHolder"
@@ -47,6 +48,10 @@ func (rc *EmbeddedAdaptor) GetInitUQHolderCopy() *uqHolder.UQHolder {
 		return nil
 	}
 	return newHolder
+}
+
+func (rc *EmbeddedAdaptor) GetInteraction() *GlobalAPI.GlobalAPI {
+	return rc.env.GlobalAPI.(*GlobalAPI.GlobalAPI)
 }
 
 func (rc *EmbeddedAdaptor) Write(pkt mc_packet.Packet) (err error) {

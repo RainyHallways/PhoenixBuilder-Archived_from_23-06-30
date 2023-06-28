@@ -1,6 +1,7 @@
 package defines
 
 import (
+	"phoenixbuilder/GameControl/GlobalAPI"
 	"phoenixbuilder/fastbuilder/uqHolder"
 	"phoenixbuilder/minecraft/protocol"
 	"phoenixbuilder/minecraft/protocol/packet"
@@ -127,13 +128,12 @@ type BackendInteract interface {
 	SetBackendCmdInterceptor(func(cmds []string) (stop bool))
 }
 
-type ExtendOperation interface {
-}
-
 // 与游戏的交互接口，通过发出点什么来影响游戏
 // 建议扩展该接口以提供更丰富的功能
 // 另一种扩展方式是定义新插件并暴露接口
 type GameControl interface {
+	GetExtendOperation() ExtendOperation
+	GetInteraction() GlobalAPI.GlobalAPI
 	SendMCPacket(packet.Packet)
 	SayTo(target string, msg string)
 	RawSayTo(target string, msg string)

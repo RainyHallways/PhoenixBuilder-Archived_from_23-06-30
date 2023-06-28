@@ -288,19 +288,12 @@ func ToPlainName(name string) string {
 }
 
 func (uq *UQHolder) GetBotName() string {
-	return uq.BotName
-}
-
-func (uq *UQHolder) GetBotIdentity() string {
-	return uq.BotIdentity
-}
-
-func (uq *UQHolder) GetBotUniqueID() int64 {
-	return uq.BotUniqueID
-}
-
-func (uq *UQHolder) GetBotRuntimeID() uint64 {
-	return uq.BotRuntimeID
+	uid := uq.BotUniqueID
+	if p, hasK := uq.PlayersByEntityID[uid]; hasK {
+		return p.Username
+	} else {
+		return ""
+	}
 }
 
 // var recordNoPlayerEntity = false
@@ -591,7 +584,6 @@ func (uq *UQHolder) Update(pk packet.Packet) {
 func (uq *UQHolder) UpdateFromConn(conn *minecraft.Conn) {
 	gd := conn.GameData()
 	uq.BotUniqueID = gd.EntityUniqueID
-	uq.BotRuntimeID = gd.EntityRuntimeID
 	uq.ConnectTime = time.Time{} // No longer needed
 	uq.WorldName = gd.WorldName
 	uq.WorldGameMode = gd.WorldGameMode
@@ -599,8 +591,6 @@ func (uq *UQHolder) UpdateFromConn(conn *minecraft.Conn) {
 	uq.OnConnectWoldSpawnPosition = gd.WorldSpawn
 	cd := conn.ClientData()
 	uq.BotRandomID = cd.ClientRandomID
-	uq.BotName = conn.IdentityData().DisplayName
-	uq.BotIdentity = conn.IdentityData().Identity
 }
 
 //func main() {
