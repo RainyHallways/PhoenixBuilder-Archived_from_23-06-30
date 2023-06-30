@@ -13,7 +13,6 @@ import (
 	"github.com/pterm/pterm"
 
 	"phoenixbuilder/fastbuilder/readline"
-	_ "phoenixbuilder/io"
 	_ "phoenixbuilder/plantform_specific/fix_timer"
 )
 
@@ -66,9 +65,6 @@ func Bootstrap() {
 	if len(args.PackScripts()) != 0 {
 		os.Exit(script_bridge.MakePackage(args.PackScripts(), args.PackScriptsOut()))
 	}
-	// setup pterm
-	// setup i18n
-	// setup readline
 	setup()
 	display_info()
 	defer Fatal()
