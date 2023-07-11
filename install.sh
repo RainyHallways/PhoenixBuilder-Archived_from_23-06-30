@@ -28,7 +28,7 @@ function ctrl_c() {
 # Start
 SCRIPT_VERSION="0.0.3"
 printf "\033[33mFastBuilder Phoenix Installer v%s\033[0m\n" "${SCRIPT_VERSION}"
-printf "\033[33mBouldev 2022, Copyrighted.\033[0m\n"
+printf "\033[33mBouldev 2023, Copyrighted.\033[0m\n"
 printf "\033[32mStarting installation progress...\033[0m\n"
 
 # Some distro does not provide `which` by default
@@ -230,7 +230,7 @@ FB_VER=""
 GH_DOMAIN=${GH_DOMAIN:="https://github.com"}
 GH_USER=${GH_USER:="LNSSPsd"}
 GH_REPO=${GH_REPO:="PhoenixBuilder"}
-GH_RELEASE_URL=${GH_RELEASE_URL:="releases/download/"}
+GH_RELEASE_URL=${GH_RELEASE_URL:="releases/latest/download/"}
 GH_LINK=${GH_LINK:="${GH_DOMAIN}/${GH_USER}/${GH_REPO}/${GH_RELEASE_URL}"}
 
 # Further system detection
@@ -393,19 +393,19 @@ report_error() {
 }
 
 # Download a file contains the latest version num for FastBuilder distros
-printf "Getting latest version of FastBuilder...\n"
-FB_VERSION_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}/version"
-if [[ ${PB_USE_GH_REPO} == "1" ]]; then
-  FB_VERSION_LINK="${GH_DOMAIN}/${GH_USER}/${GH_REPO}/raw/main/version"
-fi
-${DL_TOOL} ${DL_TOOL_OUT_FLAG} "${PREFIX}"/./fastbuilder-temp/version ${FB_VERSION_LINK}
-DL_RET=$?
-if [ ${DL_RET} == 0 ]; then
-  FB_VER=$(cat "${PREFIX}"/./fastbuilder-temp/version | sed -n -e 'H;${x;s/\n//g;p;}')
-  printf "${FB_VER}\n"
-else
-  report_error ${DL_RET}
-fi
+# printf "Getting latest version of FastBuilder...\n"
+# FB_VERSION_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}/version"
+# if [[ ${PB_USE_GH_REPO} == "1" ]]; then
+#   FB_VERSION_LINK="${GH_DOMAIN}/${GH_USER}/${GH_REPO}/raw/main/version"
+# fi
+# ${DL_TOOL} ${DL_TOOL_OUT_FLAG} "${PREFIX}"/./fastbuilder-temp/version ${FB_VERSION_LINK}
+# DL_RET=$?
+# if [ ${DL_RET} == 0 ]; then
+#   FB_VER=$(cat "${PREFIX}"/./fastbuilder-temp/version | sed -n -e 'H;${x;s/\n//g;p;}')
+#   printf "${FB_VER}\n"
+# else
+#   report_error ${DL_RET}
+# fi
 
 if [[ ${BINARY_INSTALL} == "1" ]]; then
   printf "Downloading FastBuilder binary...\n"
@@ -413,7 +413,7 @@ if [[ ${BINARY_INSTALL} == "1" ]]; then
   FB_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}${FB_PREFIX}${FILE_ARCH}${FILE_TYPE}"
   if [[ ${PB_USE_GH_REPO} == "1" ]]; then
     printf "\033[32mOriginal download link: ${FB_LINK}\033[0m\n"
-    FB_LINK="${GH_LINK}v${FB_VER}/${FB_PREFIX}${FILE_ARCH}${FILE_TYPE}"
+    FB_LINK="${GH_LINK}/${FB_PREFIX}${FILE_ARCH}${FILE_TYPE}"
     printf "\033[32mGithub download link: ${FB_LINK}\033[0m\n"
   fi
   printf "\033[33mIf the official storage does not work for you, you can try to assign environment variable \"PB_USE_GH_REPO=1\" for the script to download stuff from Github.\033[0m\n"
@@ -446,7 +446,7 @@ else
   FB_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}${FB_PREFIX}_${FB_VER}_${FILE_ARCH}${FILE_TYPE}"
   if [[ ${PB_USE_GH_REPO} == "1" ]]; then
     printf "\033[32mOriginal download link: ${FB_LINK}\033[0m\n"
-    FB_LINK="${GH_LINK}v${FB_VER}/${FB_PREFIX}_${FB_VER}_${FILE_ARCH}${FILE_TYPE}"
+    FB_LINK="${GH_LINK}/${FB_PREFIX}_${FB_VER}_${FILE_ARCH}${FILE_TYPE}"
     printf "\033[32mGithub download link: ${FB_LINK}\033[0m\n"
   else
     printf "\033[33mIf the official storage does not work for you, you can try to assign environment variable \"PB_USE_GH_REPO=1\" for the script to download stuff from Github.\033[0m\n"
