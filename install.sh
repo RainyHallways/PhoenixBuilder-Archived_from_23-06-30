@@ -393,19 +393,19 @@ report_error() {
 }
 
 # Download a file contains the latest version num for FastBuilder distros
-# printf "Getting latest version of FastBuilder...\n"
-# FB_VERSION_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}/version"
-# if [[ ${PB_USE_GH_REPO} == "1" ]]; then
-#   FB_VERSION_LINK="${GH_DOMAIN}/${GH_USER}/${GH_REPO}/raw/main/version"
-# fi
-# ${DL_TOOL} ${DL_TOOL_OUT_FLAG} "${PREFIX}"/./fastbuilder-temp/version ${FB_VERSION_LINK}
-# DL_RET=$?
-# if [ ${DL_RET} == 0 ]; then
-#   FB_VER=$(cat "${PREFIX}"/./fastbuilder-temp/version | sed -n -e 'H;${x;s/\n//g;p;}')
-#   printf "${FB_VER}\n"
-# else
-#   report_error ${DL_RET}
-# fi
+printf "Getting latest version of FastBuilder...\n"
+FB_VERSION_LINK="${FB_DOMAIN}${FB_LOCATION_ROOT}/version"
+if [[ ${PB_USE_GH_REPO} == "1" ]]; then
+  FB_VERSION_LINK="${GH_LINK}/${FB_PREFIX}/version"
+fi
+${DL_TOOL} ${DL_TOOL_OUT_FLAG} "${PREFIX}"/./fastbuilder-temp/version ${FB_VERSION_LINK}
+DL_RET=$?
+if [ ${DL_RET} == 0 ]; then
+  FB_VER=$(cat "${PREFIX}"/./fastbuilder-temp/version | sed -n -e 'H;${x;s/\n//g;p;}')
+  printf "${FB_VER}\n"
+else
+  report_error ${DL_RET}
+fi
 
 if [[ ${BINARY_INSTALL} == "1" ]]; then
   printf "Downloading FastBuilder binary...\n"
