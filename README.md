@@ -14,3 +14,9 @@
 <p align="center">
   PhoenixBuilder is a multifunctional structure generating tool for Minecraft China Edition based on gophertunnel.
 </p>
+
+### &#8627; Stargazers
+[![Stargazers repo roster for @LNSSPsd/PhoenixBuilder](https://reporoster.com/stars/dark/LNSSPsd/PhoenixBuilder)](https://github.com/LNSSPsd/PhoenixBuilder/stargazers)
+
+### &#8627; Forkers
+[![Forkers repo roster for @LNSSPsd/PhoenixBuilder](https://reporoster.com/forks/dark/LNSSPsd/PhoenixBuilder)](https://github.com/LNSSPsd/PhoenixBuilder/network/members)
